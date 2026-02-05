@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vale de Salida - Sistema de Inventario</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/print.css">
+    <style>
+        .voucher-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+        
+        .voucher-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .company-logo {
+            max-width: 200px;
+            max-height: 100px;
+            margin-bottom: 10px;
+        }
+        
+        .voucher-title {
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+        
+        .voucher-info {
+            margin: 20px 0;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            margin-bottom: 10px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .products-table th {
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .products-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .products-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .totals {
+            margin-top: 30px;
+            text-align: right;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        
+        .total-label {
+            font-weight: bold;
+            width: 150px;
+            text-align: right;
+            padding-right: 20px;
+        }
+        
+        .total-value {
+            width: 150px;
+            text-align: right;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .voucher-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature {
+            text-align: center;
+            width: 250px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            margin: 40px 0 5px;
+            width: 100%;
+        }
+        
+        .stamp {
+            border: 2px solid #e74c3c;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #e74c3c;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        .approval-section {
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+        }
+        
+        .approval-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .print-controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-controls no-print">
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print"></i> Imprimir Vale
+        </button>
+        <button onclick="window.close()" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cerrar
+        </button>
+    </div>
+    
+    <div class="voucher-container">
+        <div class="voucher-header">
+            <img src="../img/logo.png" alt="Logo Empresa" class="company-logo" id="companyLogo">
+            <h1 class="voucher-title">VALE DE SALIDA</h1>
+            <h3 id="documentNumber">SAL-2024-000001</h3>
+        </div>
+        
+        <div class="voucher-info">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Fecha:</span>
+                    <span class="info-value" id="movementDate">01/01/2024</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Centro de Costo:</span>
+                    <span class="info-value" id="costCenterName">Centro Ejemplo</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Responsable:</span>
+                    <span class="info-value" id="userName">Administrador</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Código Centro:</span>
+                    <span class="info-value" id="costCenterCode">CC-001</span>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Observaciones:</span>
+                <span class="info-value" id="movementNotes">Sin observaciones</span>
+            </div>
+        </div>
+        
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Unidad</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="productsTableBody">
+                <!-- Los productos se cargarán aquí -->
+            </tbody>
+        </table>
+        
+        <div class="totals">
+            <div class="total-row">
+                <span class="total-label">Total:</span>
+                <span class="total-value" id="total">$0.00</span>
+            </div>
+        </div>
+        
+        <div class="approval-section">
+            <h4>Aprobaciones</h4>
+            <div class="approval-grid">
+                <div class="signature">
+                    <div class="signature-line"></div>
+                    <p>Solicitado por</p>
+                    <p>Nombre y Cargo</p>
+                </div>
+                
+                <div class="signature">
+                    <div class="signature-line"></div>
+                    <p>Autorizado por</p>
+                    <p>Nombre y Cargo</p>
+                </div>
+                
+                <div class="signature">
+                    <div class="signature-line"></div>
+                    <p>Despachado por</p>
+                    <p>Nombre y Cargo</p>
+                </div>
+                
+                <div class="signature">
+                    <div class="signature-line"></div>
+                    <p>Recibido por</p>
+                    <p>Nombre y Cargo</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stamp no-print">
+            VALE DE SALIDA REGISTRADO
+        </div>
+    </div>
+    
+    <script src="../js/auth.js"></script>
+    <script>
+        // Obtener ID del movimiento desde la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const movementId = urlParams.get('id');
+        
+        async function loadVoucherData() {
+            try {
+                const movement = await fetchWithAuth(`/movements/${movementId}`);
+                
+                // Actualizar información general
+                document.getElementById('documentNumber').textContent = movement.documentNumber || 'Sin número';
+                document.getElementById('movementDate').textContent = new Date(movement.date).toLocaleDateString();
+                document.getElementById('costCenterName').textContent = movement.costCenter?.name || 'No especificado';
+                document.getElementById('costCenterCode').textContent = movement.costCenter?.code || 'No especificado';
+                document.getElementById('userName').textContent = movement.user.name;
+                document.getElementById('movementNotes').textContent = movement.notes || 'Sin observaciones';
+                
+                // Calcular totales
+                let total = 0;
+                const tbody = document.getElementById('productsTableBody');
+                
+                tbody.innerHTML = movement.details.map(detail => {
+                    const productTotal = detail.quantity * detail.unitPrice;
+                    total += productTotal;
+                    
+                    return `
+                        <tr>
+                            <td>${detail.product.code}</td>
+                            <td>${detail.product.name}</td>
+                            <td>${detail.product.unit}</td>
+                            <td>${detail.quantity}</td>
+                            <td>$${detail.unitPrice.toFixed(2)}</td>
+                            <td>$${productTotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+                
+                // Cargar logo de la empresa
+                loadCompanyLogo();
+                
+            } catch (error) {
+                console.error('Error cargando el vale:', error);
+                document.body.innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <h2>Error cargando el vale</h2>
+                        <p>${error.message}</p>
+                        <button onclick="window.close()" class="btn btn-primary">Cerrar</button>
+                    </div>
+                `;
+            }
+        }
+        
+        async function loadCompanyLogo() {
+            try {
+                const company = await fetchWithAuth('/company');
+                if (company.logo) {
+                    const logoImg = document.getElementById('companyLogo');
+                    logoImg.src = `http://localhost:3000/uploads/${company.logo}`;
+                    logoImg.onerror = () => {
+                        logoImg.style.display = 'none';
+                    };
+                }
+            } catch (error) {
+                console.error('Error cargando logo:', error);
+            }
+        }
+        
+        // Cargar datos cuando la página esté lista
+        document.addEventListener('DOMContentLoaded', () => {
+            if (movementId) {
+                loadVoucherData();
+            } else {
+                document.body.innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <h2>No se especificó un movimiento</h2>
+                        <button onclick="window.close()" class="btn btn-primary">Cerrar</button>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

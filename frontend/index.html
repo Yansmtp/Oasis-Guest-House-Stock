@@ -1,0 +1,903 @@
+button<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Inventario - Casa de Renta</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="img/favicon.ico">
+</head>
+<body>
+    <div id="app">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="navbar-brand">
+                <i class="fas fa-warehouse"></i>
+                <span>Inventario Casa Renta</span>
+            </div>
+            <div class="navbar-menu" id="navbar-menu">
+                <a href="#" class="nav-link" data-section="dashboard">
+                    <i class="fas fa-home"></i> Inicio
+                </a>
+                <a href="#" class="nav-link" data-section="products">
+                    <i class="fas fa-boxes"></i> Productos
+                </a>
+                <a href="#" class="nav-link" data-section="movements">
+                    <i class="fas fa-exchange-alt"></i> Movimientos
+                </a>
+                <a href="#" class="nav-link" data-section="clients">
+                    <i class="fas fa-users"></i> Clientes
+                </a>
+                <a href="#" class="nav-link" data-section="cost-centers">
+                    <i class="fas fa-building"></i> Centros de Costo
+                </a>
+                <a href="#" class="nav-link" data-section="reports">
+                    <i class="fas fa-chart-bar"></i> Reportes
+                </a>
+                <a href="#" class="nav-link" data-section="company">
+                    <i class="fas fa-cog"></i> Configuración
+                </a>
+                <div class="navbar-user" id="user-info">
+                    <span id="user-name">Usuario</span>
+                    <button class="btn btn-sm btn-outline" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Salir
+                    </button>
+                </div>
+            </div>
+            <button class="navbar-toggle" onclick="toggleNavbar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+
+        <!-- Login Section -->
+        <div id="login-section" class="container">
+            <div class="login-container">
+                <div class="login-header">
+                    <i class="fas fa-warehouse fa-3x"></i>
+                    <h2>Sistema de Inventario</h2>
+                    <p>Casa de Renta</p>
+                </div>
+                <form id="login-form" class="login-form">
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i> Correo Electrónico
+                        </label>
+                        <input type="email" id="email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">
+                            <i class="fas fa-lock"></i> Contraseña
+                        </label>
+                        <input type="password" id="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                    </button>
+                </form>
+                <div class="login-footer">
+                    <p>¿No tienes cuenta? <a href="#" onclick="showRegister()">Regístrate</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Section -->
+        <div id="register-section" class="container" style="display: none;">
+            <div class="login-container">
+                <div class="login-header">
+                    <i class="fas fa-user-plus fa-3x"></i>
+                    <h2>Crear Cuenta</h2>
+                </div>
+                <form id="register-form" class="login-form">
+                    <div class="form-group">
+                        <label for="register-name">
+                            <i class="fas fa-user"></i> Nombre Completo
+                        </label>
+                        <input type="text" id="register-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">
+                            <i class="fas fa-envelope"></i> Correo Electrónico
+                        </label>
+                        <input type="email" id="register-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">
+                            <i class="fas fa-lock"></i> Contraseña
+                        </label>
+                        <input type="password" id="register-password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm">
+                            <i class="fas fa-lock"></i> Confirmar Contraseña
+                        </label>
+                        <input type="password" id="register-confirm" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-user-plus"></i> Registrarse
+                    </button>
+                </form>
+                <div class="login-footer">
+                    <p>¿Ya tienes cuenta? <a href="#" onclick="showLogin()">Inicia Sesión</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" style="display: none;">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section">
+                <div class="container">
+                    <h1><i class="fas fa-home"></i> Dashboard</h1>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-primary">
+                                <i class="fas fa-boxes"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-products">0</h3>
+                                <p>Productos Totales</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon bg-danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="low-stock">0</h3>
+                                <p>Bajo Stock</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon bg-success">
+                                <i class="fas fa-arrow-down"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-entries">0</h3>
+                                <p>Entradas Hoy</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon bg-warning">
+                                <i class="fas fa-arrow-up"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-exits">0</h3>
+                                <p>Salidas Hoy</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3><i class="fas fa-history"></i> Movimientos Recientes</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table" id="recent-movements">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Tipo</th>
+                                                    <th>Documento</th>
+                                                    <th>Cliente/Centro</th>
+                                                    <th>Total</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Los movimientos se cargarán aquí -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3><i class="fas fa-exclamation-circle"></i> Productos Bajo Stock</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="low-stock-list">
+                                        <!-- Los productos se cargarán aquí -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products Section -->
+            <section id="products" class="section" style="display: none;">
+                <div class="container">
+                    <div class="section-header">
+                        <h1><i class="fas fa-boxes"></i> Gestión de Productos</h1>
+                        <button class="btn btn-primary" onclick="showAddProductModal()">
+                            <i class="fas fa-plus"></i> Nuevo Producto
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <input type="text" id="product-search" class="form-control" 
+                                       placeholder="Buscar productos..." onkeyup="searchProducts()">
+                                <select id="product-filter" class="form-control" onchange="filterProducts()">
+                                    <option value="all">Todos</option>
+                                    <option value="active">Activos</option>
+                                    <option value="inactive">Inactivos</option>
+                                    <option value="low">Bajo Stock</option>
+                                </select>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table" id="products-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Producto</th>
+                                            <th>Unidad</th>
+                                            <th>Stock</th>
+                                            <th>Stock Mín.</th>
+                                            <th>Costo Unit.</th>
+                                            <th>Valor Total</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Los productos se cargarán aquí -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="pagination" id="products-pagination">
+                                <!-- La paginación se generará aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Movements Section -->
+            <section id="movements" class="section" style="display: none;">
+                <div class="container">
+                    <div class="section-header">
+                        <h1><i class="fas fa-exchange-alt"></i> Movimientos</h1>
+                        <div>
+                            <button class="btn btn-primary" onclick="showMovementModal('ENTRADA')">
+                                <i class="fas fa-arrow-down"></i> Nueva Entrada
+                            </button>
+                            <button class="btn btn-warning" onclick="showMovementModal('SALIDA')">
+                                <i class="fas fa-arrow-up"></i> Nueva Salida
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="filter-bar">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <select id="movement-type-filter" class="form-control" onchange="filterMovements()">
+                                            <option value="">Todos los tipos</option>
+                                            <option value="ENTRADA">Entradas</option>
+                                            <option value="SALIDA">Salidas</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="date" id="movement-start-date" class="form-control" 
+                                               onchange="filterMovements()">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="date" id="movement-end-date" class="form-control" 
+                                               onchange="filterMovements()">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-secondary btn-block" onclick="clearMovementFilters()">
+                                            <i class="fas fa-times"></i> Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table" id="movements-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Tipo</th>
+                                            <th>Documento</th>
+                                            <th>Cliente/Centro</th>
+                                            <th>Descripción</th>
+                                            <th>Productos</th>
+                                            <th>Total</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Los movimientos se cargarán aquí -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="pagination" id="movements-pagination">
+                                <!-- La paginación se generará aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Clients Section -->
+            <section id="clients" class="section" style="display: none;">
+                <div class="container">
+                    <div class="section-header">
+                        <h1><i class="fas fa-users"></i> Clientes</h1>
+                        <button class="btn btn-primary" onclick="showAddClientModal()">
+                            <i class="fas fa-plus"></i> Nuevo Cliente
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <input type="text" id="client-search" class="form-control" 
+                                       placeholder="Buscar clientes..." onkeyup="searchClients()">
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table" id="clients-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre</th>
+                                            <th>Email</th>
+                                            <th>Teléfono</th>
+                                            <th>RUC/NIT</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Los clientes se cargarán aquí -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="pagination" id="clients-pagination">
+                                <!-- La paginación se generará aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cost Centers Section -->
+            <section id="cost-centers" class="section" style="display: none;">
+                <div class="container">
+                    <div class="section-header">
+                        <h1><i class="fas fa-building"></i> Centros de Costo</h1>
+                        <button class="btn btn-primary" onclick="showAddCostCenterModal()">
+                            <i class="fas fa-plus"></i> Nuevo Centro
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <input type="text" id="cost-center-search" class="form-control" 
+                                       placeholder="Buscar centros de costo..." onkeyup="searchCostCenters()">
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table" id="cost-centers-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre</th>
+                                            <th>Descripción</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Los centros de costo se cargarán aquí -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="pagination" id="cost-centers-pagination">
+                                <!-- La paginación se generará aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports" class="section" style="display: none;">
+                <div class="container">
+                    <h1><i class="fas fa-chart-bar"></i> Reportes</h1>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card report-card" onclick="showStockReport()">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-boxes fa-3x text-primary"></i>
+                                    <h3>Reporte de Stock</h3>
+                                    <p>Inventario actual y productos bajo stock</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card report-card" onclick="showMovementsReport()">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-exchange-alt fa-3x text-success"></i>
+                                    <h3>Reporte de Movimientos</h3>
+                                    <p>Entradas y salidas por período</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card report-card" onclick="showClientReport()">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-users fa-3x text-warning"></i>
+                                    <h3>Reporte por Cliente</h3>
+                                    <p>Movimientos por cliente</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="report-content">
+                        <!-- Los reportes se mostrarán aquí -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Company Section -->
+            <section id="company" class="section" style="display: none;">
+                <div class="container">
+                    <h1><i class="fas fa-cog"></i> Configuración de Empresa</h1>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Información de la Empresa</h3>
+                                </div>
+                                <div class="card-body">
+                                    <form id="company-form">
+                                        <div class="form-group">
+                                            <label>Nombre de la Empresa</label>
+                                            <input type="text" id="company-name" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>RUC/NIT</label>
+                                            <input type="text" id="company-tax-id" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Dirección</label>
+                                            <input type="text" id="company-address" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Teléfono</label>
+                                            <input type="tel" id="company-phone" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Email</label>
+                                            <input type="email" id="company-email" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Sitio Web</label>
+                                            <input type="url" id="company-website" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Umbral de Stock Bajo</label>
+                                            <input type="number" id="company-low-stock" class="form-control" min="0">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> Guardar Cambios
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Logo de la Empresa</h3>
+                                </div>
+                                <div class="card-body text-center">
+                                    <div id="logo-preview" class="logo-preview">
+                                        <img id="company-logo" src="" alt="Logo" style="max-width: 200px; max-height: 200px;">
+                                        <p id="no-logo" style="display: none;">No hay logo cargado</p>
+                                    </div>
+                                    <form id="logo-form" enctype="multipart/form-data">
+                                        <div class="form-group">
+                                            <label for="logo-file">Seleccionar archivo (JPG, PNG, SVG)</label>
+                                            <input type="file" id="logo-file" class="form-control" accept=".jpg,.jpeg,.png,.svg">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-upload"></i> Subir Logo
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Monedas y Tasa de Cambio</h3>
+                                </div>
+                                <div class="card-body">
+                                    <form id="currency-form">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label>Moneda</label>
+                                                    <select id="currency-code" class="form-control"></select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label>Tasa (1 USD = X moneda)</label>
+                                                    <input type="number" id="currency-rate" class="form-control" min="0.0001" step="0.0001" required>
+                                                    <small id="currency-effective" class="text-muted"></small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 d-flex align-items-end">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fas fa-save"></i> Guardar Tasa
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Respaldo y Restablecimiento</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">
+                                        Estas acciones afectan a la base de datos y archivos subidos (incluye logo).
+                                    </p>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-secondary" id="maintenance-backup-btn">
+                                            <i class="fas fa-download"></i> Crear Backup
+                                        </button>
+                                        <button class="btn btn-danger" id="maintenance-reset-btn">
+                                            <i class="fas fa-bomb"></i> Formatear y Restablecer
+                                        </button>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">
+                                        El restablecimiento hace backup antes de borrar.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Modals -->
+        <div id="modal-overlay" class="modal-overlay" onclick="closeModal()"></div>
+        
+        <!-- Product Modal -->
+        <div id="product-modal" class="modal">
+            <div class="modal-header">
+                <h3 id="product-modal-title">Nuevo Producto</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="product-form">
+                    <input type="hidden" id="product-id">
+                    <div class="form-group">
+                        <label>Código *</label>
+                        <input type="text" id="product-code" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" id="product-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="product-description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Unidad de Medida *</label>
+                                <select id="product-unit" class="form-control" required>
+                                    <option value="UNIDAD">Unidad</option>
+                                    <option value="KILOGRAMO">Kilogramo</option>
+                                    <option value="GRAMO">Gramo</option>
+                                    <option value="LIBRA">Libra</option>
+                                    <option value="ONZA">Onza</option>
+                                    <option value="LITRO">Litro</option>
+                                    <option value="MILILITRO">Mililitro</option>
+                                    <option value="GALON">Galón</option>
+                                    <option value="CAJA">Caja</option>
+                                    <option value="POMO">Pomo</option>
+                                    <option value="PAR">Par</option>
+                                    <option value="METRO">Metro</option>
+                                    <option value="CENTIMETRO">Centímetro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Costo Unitario *</label>
+                                <input type="number" id="product-unit-cost" class="form-control" min="0" step="0.01" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Stock Mínimo *</label>
+                                <input type="number" id="product-min-stock" class="form-control" min="0" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Stock Máximo</label>
+                                <input type="number" id="product-max-stock" class="form-control" min="0" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="product-active" checked> Activo
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveProduct()">Guardar</button>
+            </div>
+        </div>
+
+        <!-- Movement Modal -->
+        <div id="movement-modal" class="modal wide-modal">
+            <div class="modal-header">
+                <h3 id="movement-modal-title">Nuevo Movimiento</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="movement-form">
+                    <input type="hidden" id="movement-type">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Fecha *</label>
+                                <input type="datetime-local" id="movement-date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Número de Documento</label>
+                                <input type="text" id="movement-document" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="movement-description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="row" id="movement-currency-row" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Moneda de Entrada</label>
+                                <select id="movement-currency" class="form-control"></select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Tasa (1 USD = X moneda)</label>
+                                <input type="text" id="movement-currency-rate" class="form-control" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="movement-client-section">
+                        <div class="form-group">
+                            <label id="movement-client-label">Cliente *</label>
+                            <select id="movement-client" class="form-control" required>
+                                <option value="">Seleccionar cliente</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="movement-cost-center-section" style="display: none;">
+                        <div class="form-group">
+                            <label>Centro de Costo *</label>
+                            <select id="movement-cost-center" class="form-control" required>
+                                <option value="">Seleccionar centro de costo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="section-header">
+                        <h4>Detalles del Movimiento</h4>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="addMovementDetail()">
+                            <i class="fas fa-plus"></i> Agregar Producto
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table" id="movement-details-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Costo Unit.</th>
+                                    <th>Total</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movement-details-body">
+                                <!-- Los detalles se agregarán aquí -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-right"><strong>Total:</strong></td>
+                                    <td><strong id="movement-total">0.00</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveMovement()">Guardar Movimiento</button>
+            </div>
+        </div>
+
+        <!-- Client Modal -->
+        <div id="client-modal" class="modal">
+            <div class="modal-header">
+                <h3 id="client-modal-title">Nuevo Cliente</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="client-form">
+                    <input type="hidden" id="client-id">
+                    <div class="form-group">
+                        <label>Código *</label>
+                        <input type="text" id="client-code" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" id="client-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="client-email" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" id="client-phone" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección</label>
+                        <textarea id="client-address" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>RUC/NIT</label>
+                        <input type="text" id="client-tax-id" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="client-active" checked> Activo
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveClient()">Guardar</button>
+            </div>
+        </div>
+
+        <!-- Cost Center Modal -->
+        <div id="cost-center-modal" class="modal">
+            <div class="modal-header">
+                <h3 id="cost-center-modal-title">Nuevo Centro de Costo</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="cost-center-form">
+                    <input type="hidden" id="cost-center-id">
+                    <div class="form-group">
+                        <label>Código *</label>
+                        <input type="text" id="cost-center-code" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" id="cost-center-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="cost-center-description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="cost-center-active" checked> Activo
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveCostCenter()">Guardar</button>
+            </div>
+        </div>
+
+        <!-- Product Selection Modal -->
+        <div id="product-selection-modal" class="modal">
+            <div class="modal-header">
+                <h3>Seleccionar Producto</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="product-search-modal" class="form-control" 
+                       placeholder="Buscar producto..." onkeyup="searchProductsModal()">
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table" id="products-selection-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Stock</th>
+                                <th>Costo</th>
+                                <th>Seleccionar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Los productos se cargarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/products.js"></script>
+    <script src="js/movements.js"></script>
+    <script src="js/clients.js"></script>
+    <script src="js/costCenters.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/company.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

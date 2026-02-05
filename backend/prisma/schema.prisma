@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MovementType {
+  ENTRADA
+  SALIDA
+}
+
+enum UnitType {
+  UNIDAD
+  KILOGRAMO
+  GRAMO
+  LIBRA
+  ONZA
+  LITRO
+  MILILITRO
+  GALON
+  CAJA
+  POMO
+  PAR
+  METRO
+  CENTIMETRO
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movements Movement[]
+  auditLogs AuditLog[]
+}
+
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  description String?
+  unit        UnitType
+  unitCost    Decimal  @default(0)
+  stock       Decimal  @default(0)
+  minStock    Decimal  @default(0)
+  maxStock    Decimal?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movements   MovementDetail[]
+}
+
+model Client {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  taxId       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movements   Movement[]
+}
+
+model CostCenter {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movements   Movement[]
+}
+
+model Movement {
+  id            Int             @id @default(autoincrement())
+  type          MovementType
+  date          DateTime        @default(now())
+  documentNumber String?
+  description   String?
+  currencyCode  String          @default("USD")
+  rateAtTransaction Decimal     @default(1)
+  
+  // Relaciones
+  clientId      Int?
+  client        Client?         @relation(fields: [clientId], references: [id])
+  costCenterId  Int?
+  costCenter    CostCenter?     @relation(fields: [costCenterId], references: [id])
+  userId        Int
+  user          User            @relation(fields: [userId], references: [id])
+  
+  // Detalles
+  details       MovementDetail[]
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model MovementDetail {
+  id           Int      @id @default(autoincrement())
+  movementId   Int
+  movement     Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  productId    Int
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Decimal
+  unitCost     Decimal
+  totalCost    Decimal
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String
+  taxId       String?
+  address     String?
+  phone       String?
+  email       String?
+  website     String?
+  logo        String?
+  lowStockThreshold Decimal @default(10)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  action      String
+  table       String
+  recordId    Int
+  oldData     Json?
+  newData     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+}
+
+model CurrencyRate {
+  id            Int      @id @default(autoincrement())
+  code          String
+  rate          Decimal  @default(1)
+  effectiveFrom DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([code, effectiveFrom])
+}

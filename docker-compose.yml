@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: inventario-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: inventario_casa_renta
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/setup-database.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - inventario-network
+
+  backend:
+    build: ./backend
+    container_name: inventario-backend
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: "postgresql://postgres:password@postgres:5432/inventario_casa_renta"
+      JWT_SECRET: "your-super-secret-jwt-key-change-in-production"
+      JWT_EXPIRATION: "24h"
+      PORT: 3000
+      NODE_ENV: "production"
+      FRONTEND_URL: "http://localhost:8080"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/prisma:/app/prisma
+    networks:
+      - inventario-network
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    container_name: inventario-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    networks:
+      - inventario-network
+    restart: unless-stopped
+
+networks:
+  inventario-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

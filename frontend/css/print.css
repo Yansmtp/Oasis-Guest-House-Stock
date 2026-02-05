@@ -1,0 +1,352 @@
+@media print {
+    /* Ocultar elementos no necesarios para impresión */
+    .navbar,
+    .btn,
+    .modal,
+    .modal-overlay,
+    .section-header button,
+    .search-bar,
+    .filter-bar,
+    .pagination,
+    .no-print {
+        display: none !important;
+    }
+
+    /* Ajustes generales */
+    body {
+        font-size: 12pt;
+        line-height: 1.4;
+        color: #000 !important;
+        background: #fff !important;
+    }
+
+    /* Contenedor principal */
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Secciones visibles */
+    .section {
+        display: block !important;
+        page-break-inside: avoid;
+    }
+
+    /* Encabezados de voucher */
+    .voucher-header {
+        text-align: center;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+    }
+
+    .company-logo {
+        max-width: 150px;
+        max-height: 100px;
+        margin: 0 auto 10px;
+    }
+
+    .company-info {
+        text-align: center;
+    }
+
+    .company-info h1 {
+        font-size: 18pt;
+        margin: 5px 0;
+    }
+
+    .company-info p {
+        font-size: 10pt;
+        margin: 2px 0;
+    }
+
+    /* Información del movimiento */
+    .movement-info {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #000;
+        border-radius: 4px;
+    }
+
+    .movement-info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .movement-info-row strong {
+        font-weight: bold;
+    }
+
+    /* Tablas para impresión */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+    }
+
+    .table th,
+    .table td {
+        border: 1px solid #000;
+        padding: 8px;
+        text-align: left;
+        font-size: 10pt;
+    }
+
+    .table th {
+        background-color: #f2f2f2 !important;
+        -webkit-print-color-adjust: exact;
+        font-weight: bold;
+    }
+
+    .table tfoot td {
+        font-weight: bold;
+        background-color: #f2f2f2 !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Totales y resúmenes */
+    .summary-section {
+        margin-top: 30px;
+        page-break-inside: avoid;
+    }
+
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        font-weight: bold;
+        font-size: 12pt;
+        padding: 10px 0;
+        border-top: 2px solid #000;
+    }
+
+    /* Firmas */
+    .signature-section {
+        margin-top: 50px;
+        page-break-inside: avoid;
+    }
+
+    .signature-line {
+        width: 60%;
+        border-top: 1px solid #000;
+        margin: 40px auto 10px;
+        text-align: center;
+    }
+
+    .signature-label {
+        text-align: center;
+        font-size: 10pt;
+    }
+
+    /* Control de saltos de página */
+    .page-break {
+        page-break-before: always;
+    }
+
+    .avoid-break {
+        page-break-inside: avoid;
+    }
+
+    /* Ajustes para reportes */
+    .report-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        border: 1px solid #000;
+        padding: 10px;
+        break-inside: avoid;
+    }
+
+    /* Encabezados de reportes */
+    .report-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .report-title {
+        font-size: 16pt;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .report-period {
+        font-size: 12pt;
+        margin-bottom: 10px;
+    }
+
+    /* Pie de página para reportes */
+    .report-footer {
+        margin-top: 30px;
+        font-size: 9pt;
+        color: #666;
+        text-align: center;
+        border-top: 1px solid #000;
+        padding-top: 10px;
+    }
+
+    /* Ajustes para múltiples páginas */
+    @page {
+        margin: 20mm;
+    }
+
+    @page :first {
+        margin-top: 15mm;
+    }
+
+    /* Estilos para elementos específicos de voucher */
+    .voucher-type {
+        font-size: 14pt;
+        text-align: center;
+        text-transform: uppercase;
+        font-weight: bold;
+        margin: 15px 0;
+        padding: 5px;
+        border: 2px solid #000;
+    }
+
+    .voucher-number {
+        font-size: 12pt;
+        font-weight: bold;
+        text-align: right;
+    }
+
+    .client-info,
+    .cost-center-info {
+        margin: 15px 0;
+        padding: 10px;
+        background-color: #f9f9f9 !important;
+        -webkit-print-color-adjust: exact;
+        border: 1px solid #ddd;
+    }
+
+    /* Columnas específicas para voucher */
+    .voucher-table th:nth-child(1) { width: 15%; } /* Código */
+    .voucher-table th:nth-child(2) { width: 35%; } /* Producto */
+    .voucher-table th:nth-child(3) { width: 15%; } /* Unidad */
+    .voucher-table th:nth-child(4) { width: 15%; } /* Cantidad */
+    .voucher-table th:nth-child(5) { width: 20%; } /* Total */
+
+    /* Notas y observaciones */
+    .notes-section {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #000;
+        font-size: 10pt;
+    }
+
+    .notes-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    /* Control de flujo de texto */
+    .keep-together {
+        page-break-inside: avoid;
+    }
+
+    /* Ajuste de márgenes para contenido */
+    .print-content {
+        padding: 10px;
+    }
+
+    /* Estilo para código de barras (si se implementa) */
+    .barcode {
+        text-align: center;
+        margin: 10px 0;
+    }
+
+    .barcode img {
+        max-width: 200px;
+        height: auto;
+    }
+
+    /* Información de generación */
+    .generated-info {
+        font-size: 8pt;
+        text-align: right;
+        color: #666;
+        margin-top: 20px;
+    }
+
+    /* Ajuste para listas de productos bajo stock */
+    .low-stock-list {
+        margin: 10px 0;
+    }
+
+    .low-stock-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    /* Encabezado de reporte de inventario */
+    .inventory-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    /* Resaltado de valores importantes */
+    .highlight {
+        font-weight: bold;
+        background-color: #f2f2f2 !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Estilo para totales generales */
+    .grand-total {
+        font-size: 14pt;
+        font-weight: bold;
+        text-align: right;
+        padding: 15px;
+        border-top: 3px double #000;
+        margin-top: 20px;
+    }
+}
+
+/* Estilos específicos para vista previa de impresión */
+@media screen and (max-width: 768px) {
+    .print-preview {
+        background: white;
+        padding: 20px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+}
+
+/* Asegurar que las imágenes no se corten */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Control de colores para impresión */
+* {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+}
+
+/* Evitar que los enlaces se impriman con subrayado */
+a {
+    text-decoration: none !important;
+    color: #000 !important;
+}
+
+/* Ajuste para números */
+.number {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+}
