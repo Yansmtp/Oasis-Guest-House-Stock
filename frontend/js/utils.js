@@ -1,6 +1,11 @@
 const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL)
     ? window.API_BASE_URL
-    : `${window.location.protocol}//${window.location.hostname}:3000/api`;
+    : (function() {
+        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const isLocal = /^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1]))/.test(host);
+        if (isLocal) return 'http://localhost:3000/api';
+        return 'https://oasis-guest-house-inventory-production.up.railway.app/api';
+    })();
 let currentUser = null;
 let currentPage = 1;
 
