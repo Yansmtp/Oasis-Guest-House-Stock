@@ -8,6 +8,13 @@
         // Backend en Railway para producción; en local cambia a http://localhost:3000/api si lo necesitas.
         window.API_BASE_URL = 'https://oasis-guest-house-inventory-production.up.railway.app/api';
     </script>
+    <style>
+        /* Salvaguarda para que el login se vea aunque falle el CSS principal */
+        body { background: #f5f7fa; margin: 0; }
+        #login-section { display: block; }
+        #register-section { display: none; }
+        #main-content { display: none; }
+    </style>
     <link rel="stylesheet" href="css/style.css?v=20260328">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="img/favicon.ico">
