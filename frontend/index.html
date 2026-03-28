@@ -5,12 +5,12 @@ button<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Inventario - Casa de Renta</title>
     <script>
-        // Backend API base para despliegue en Railway. Solo se establece fuera de red local.
+        // Si se está sirviendo desde Vercel/Railway, fija el backend productivo; en cualquier otro host, se queda local.
         (function() {
             const host = window.location.hostname;
-            const isLocal = /^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1]))/.test(host);
-            if (!isLocal) {
-                window.API_BASE_URL = window.API_BASE_URL || 'https://oasis-guest-house-inventory-production.up.railway.app/api';
+            const isProdHost = /vercel\.app$/.test(host) || /railway\.app$/.test(host);
+            if (isProdHost) {
+                window.API_BASE_URL = 'https://oasis-guest-house-inventory-production.up.railway.app/api';
             }
         })();
     </script>
