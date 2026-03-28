@@ -1,10 +1,10 @@
-// Resolucion dinamica: usa window.API_BASE_URL si se inyecta, caso contrario:
-// - en host local -> http://localhost:3000/api (desarrollo)
-// - en host remoto (Vercel, etc.) -> rutas relativas /api que se resuelven via rewrites
+// Resolución dinámica: usa window.API_BASE_URL si se inyecta.
+// Producción (Vercel): apuntamos directo al backend en Railway para evitar problemas de rewrites.
+// Desarrollo local: localhost:3000.
 const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL)
   ? window.API_BASE_URL
-  : (typeof window !== 'undefined' && window.location && window.location.hostname != 'localhost'
-      ? '/api'
+  : (typeof window !== 'undefined' && window.location && window.location.hostname !== 'localhost'
+      ? 'https://oasis-guest-house-inventory-production.up.railway.app/api'
       : 'http://localhost:3000/api');
 let currentUser = null;
 let currentPage = 1;
