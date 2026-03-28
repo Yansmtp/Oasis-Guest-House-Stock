@@ -6,7 +6,16 @@ import { map } from 'rxjs/operators';
 import { AppModule } from './app.module';
 import helmet from 'helmet'; // <- cambio aquí
 import { ConfigService } from '@nestjs/config';
-import { join } from 'path';
+import { resolveUploadsRoot } from './shared/utils/uploads-root';
+
+function parseAllowedOrigins(raw?: string): string[] | '*' {
+  if (!raw) return '*';
+  const list = raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  return list.length ? list : '*';
+}
 
 @Injectable()
 class LogoUrlInterceptor implements NestInterceptor {
@@ -49,7 +58,6 @@ class LogoUrlInterceptor implements NestInterceptor {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
-
   // Seguridad
   // Aplicamos helmet y permitimos carga cross-origin de recursos estáticos
   app.use(helmet());
@@ -60,8 +68,16 @@ async function bootstrap() {
     console.warn('crossOriginResourcePolicy no disponible en helmet:', e);
   }
 
+  const allowedOrigins = parseAllowedOrigins(
+    configService.get('FRONTEND_URLS') || configService.get('FRONTEND_URL')
+  );
+
   app.enableCors({
-    origin: configService.get('FRONTEND_URL', 'http://localhost:8080'),
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins === '*') return callback(null, true);
+      const ok = Array.isArray(allowedOrigins) && origin && allowedOrigins.includes(origin);
+      return callback(ok ? null : new Error(`Origin ${origin} not allowed by CORS`), ok);
+    },
     credentials: true,
     // Incluir HEAD y PATCH para que las peticiones preflight permitan métodos PATCH
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -85,14 +101,20 @@ async function bootstrap() {
     // Permitir uso cross-origin de recursos estáticos (para <img>, <link>, etc.)
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     // También permitir CORS en caso de que el navegador lo requiera para ciertas solicitudes
-    res.setHeader('Access-Control-Allow-Origin', configService.get('FRONTEND_URL', 'http://localhost:8080'));
+    const origin = req.headers.origin as string | undefined;
+    if (allowedOrigins === '*' && origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else if (Array.isArray(allowedOrigins) && origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     next();
   });
 
   // Servir carpeta uploads como estática en /uploads
   // Esto expone backend/uploads/* en http://HOST:PORT/uploads/*
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads' });
+  const uploadsRoot = resolveUploadsRoot(configService.get('UPLOAD_PATH', './uploads'));
+  app.useStaticAssets(uploadsRoot, { prefix: '/uploads' });
 
   // Interceptor global: convierte rutas de 'logo' que empiezan con '/uploads' en URLs absolutas
   app.useGlobalInterceptors(new LogoUrlInterceptor());
@@ -102,3 +124,4 @@ async function bootstrap() {
   console.log(`🚀 Aplicación corriendo en: http://localhost:${port}`);
 }
 bootstrap();
+
