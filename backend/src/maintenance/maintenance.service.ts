@@ -39,6 +39,14 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
+    // En entornos Linux (Railway/Vercel) no hay PowerShell ni pg_dump local:
+    // desactivar tareas automáticas de backup para evitar errores.
+    if (process.platform !== 'win32') {
+      this.logger.warn('Auto-backup desactivado: PowerShell no disponible en este entorno');
+      this.autoBackupEnabled = false;
+      return;
+    }
+
     this.autoBackupEnabled = String(process.env.MAINTENANCE_AUTO_BACKUP ?? 'true').toLowerCase() !== 'false';
     const parsedHours = Number(process.env.MAINTENANCE_AUTO_BACKUP_HOURS ?? '24');
     this.autoBackupIntervalHours = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 24;
@@ -78,6 +86,9 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
   }
 
   private runPowerShell(scriptPath: string, args: string[] = []): Promise<string> {
+    if (process.platform !== 'win32') {
+      throw new InternalServerErrorException('Backup/restore no disponible en este entorno (PowerShell requerido)');
+    }
     return new Promise((resolve, reject) => {
       execFile(
         'powershell',
