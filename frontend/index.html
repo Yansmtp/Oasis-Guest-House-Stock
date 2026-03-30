@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oasis Guest House</title>
     <script>
-        // Backend único en Railway (producción). Si quieres apuntar a otro backend, sobreescribe window.API_BASE_URL.
-        window.API_BASE_URL = 'https://oasis-guest-house-inventory-production.up.railway.app/api';
+        // Usar el rewrite de Vercel: el frontend llama a /api y Vercel lo reenvía al backend.
+        window.API_BASE_URL = '/api';
     </script>
     <style>
         /* Salvaguarda para que el login se vea aunque falle el CSS principal */
@@ -15,7 +15,7 @@
         #register-section { display: none; }
         #main-content { display: none; }
     </style>
-    <link rel="stylesheet" href="css/style.css?v=20260331">
+    <link rel="stylesheet" href="css/style.css?v=20260332">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="img/favicon.ico">
 </head>
@@ -1114,16 +1114,16 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/utils.js?v=20260331"></script>
-    <script src="js/auth.js?v=20260331"></script>
-    <script src="js/products.js?v=20260331"></script>
-    <script src="js/movements.js?v=20260331"></script>
-    <script src="js/clients.js?v=20260331"></script>
-    <script src="js/costCenters.js?v=20260331"></script>
-    <script src="js/reports.js?v=20260331"></script>
-    <script src="js/company.js?v=20260331"></script>
-    <script src="js/users.js?v=20260331"></script>
-    <script src="js/app.js?v=20260331"></script>
+    <script src="js/utils.js?v=20260332"></script>
+    <script src="js/auth.js?v=20260332"></script>
+    <script src="js/products.js?v=20260332"></script>
+    <script src="js/movements.js?v=20260332"></script>
+    <script src="js/clients.js?v=20260332"></script>
+    <script src="js/costCenters.js?v=20260332"></script>
+    <script src="js/reports.js?v=20260332"></script>
+    <script src="js/company.js?v=20260332"></script>
+    <script src="js/users.js?v=20260332"></script>
+    <script src="js/app.js?v=20260332"></script>
 </body>
 </html>
 

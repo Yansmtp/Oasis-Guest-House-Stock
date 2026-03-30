@@ -1,7 +1,7 @@
-// Backend fijo en Railway. Se puede sobreescribir con window.API_BASE_URL si se necesita otro entorno.
+// Usamos el rewrite de Vercel: por defecto /api; se puede sobreescribir con window.API_BASE_URL si hace falta.
 const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL)
   ? window.API_BASE_URL
-  : 'https://oasis-guest-house-inventory-production.up.railway.app/api';
+  : '/api';
 let currentUser = null;
 let currentPage = 1;
 
