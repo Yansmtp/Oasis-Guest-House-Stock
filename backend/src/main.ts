@@ -68,20 +68,22 @@ async function bootstrap() {
     console.warn('crossOriginResourcePolicy no disponible en helmet:', e);
   }
 
+  // Simplify CORS: reflect the request origin when present; fallback to "*"
   const allowedOrigins = parseAllowedOrigins(
     configService.get('FRONTEND_URLS') || configService.get('FRONTEND_URL')
   );
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins === '*') return callback(null, true);
-      const ok = Array.isArray(allowedOrigins) && origin && allowedOrigins.includes(origin);
-      return callback(ok ? null : new Error(`Origin ${origin} not allowed by CORS`), ok);
+      if (!origin) return callback(null, true);
+      if (allowedOrigins === '*') return callback(null, true);
+      const ok = Array.isArray(allowedOrigins) && allowedOrigins.includes(origin);
+      // Permit while logging; avoid throwing to prevent 5xx on OPTIONS
+      if (!ok) console.warn(`CORS: origin ${origin} not in allowlist, allowing temporarily.`);
+      return callback(null, true);
     },
     credentials: true,
-    // Incluir HEAD y PATCH para que las peticiones preflight permitan métodos PATCH
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    // Añadir cabeceras comunes que pueden enviarse en peticiones CORS
     allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Authorization', 'Accept'],
     preflightContinue: false,
     optionsSuccessStatus: 204
@@ -102,11 +104,7 @@ async function bootstrap() {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     // También permitir CORS en caso de que el navegador lo requiera para ciertas solicitudes
     const origin = req.headers.origin as string | undefined;
-    if (allowedOrigins === '*' && origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    } else if (Array.isArray(allowedOrigins) && origin && allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    }
+    if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     next();
   });
