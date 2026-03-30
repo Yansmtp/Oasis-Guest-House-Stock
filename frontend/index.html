@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oasis Guest House</title>
     <script>
-        // Backend en Railway para producción; en local cambia a http://localhost:3000/api si lo necesitas.
-        window.API_BASE_URL = 'https://oasis-guest-house-inventory-production.up.railway.app/api';
+        // Selección dinámica del backend: localhost en desarrollo, /api (rewrite Vercel) en producción.
+        (function () {
+            const host = window.location.hostname;
+            const isLocal = host === 'localhost' || host === '127.0.0.1';
+            window.API_BASE_URL = isLocal ? 'http://localhost:3000/api' : '/api';
+        })();
     </script>
     <style>
         /* Salvaguarda para que el login se vea aunque falle el CSS principal */
@@ -15,7 +19,7 @@
         #register-section { display: none; }
         #main-content { display: none; }
     </style>
-    <link rel="stylesheet" href="css/style.css?v=20260328">
+    <link rel="stylesheet" href="css/style.css?v=20260330">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="img/favicon.ico">
 </head>
