@@ -18,4 +18,5 @@ RUN npm run build
 EXPOSE 3000
 
 # Start application
-CMD ["node", "dist/main"]
+# Ejecuta las migraciones de Prisma antes de iniciar la aplicación
+CMD npx prisma migrate deploy && node dist/main
