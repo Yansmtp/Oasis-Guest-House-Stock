@@ -17,7 +17,13 @@ import { HealthController } from './health.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      // Carga valores por defecto si no están en el entorno para evitar errores de inicio
+      load: [() => ({
+        JWT_SECRET: process.env.JWT_SECRET || 'oasis_default_secret_key_change_me_in_production',
+      })],
+    }),
 
     SharedModule,     // contiene PrismaModule
     AuthModule,

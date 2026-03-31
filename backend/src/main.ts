@@ -101,6 +101,11 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LogoUrlInterceptor());
 
   const port = configService.get('PORT', 3000);
+  
+  if (!process.env.JWT_SECRET) {
+    console.warn('⚠️  ADVERTENCIA: JWT_SECRET no definido. Usando clave por defecto insegura.');
+  }
+
   await app.listen(port);
   console.log(`🚀 Aplicación corriendo en: http://localhost:${port}`);
 }

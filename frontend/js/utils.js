@@ -1,7 +1,11 @@
 // Desarrollo local: siempre usa backend en localhost:3000 a menos que window.API_BASE_URL se sobreescriba manualmente.
-const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL)
-  ? window.API_BASE_URL
-  : 'http://localhost:3000/api';
+if (typeof window !== 'undefined' && !window.API_BASE_URL) {
+    window.API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3000/api'
+        : 'https://oasis-guest-house-stock-ok.up.railway.app/api';
+}
+
+const API_BASE_URL = window.API_BASE_URL;
 let currentUser = null;
 let currentPage = 1;
 
