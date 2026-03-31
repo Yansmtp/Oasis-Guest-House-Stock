@@ -1,7 +1,4 @@
-// Desarrollo local: siempre usa backend en localhost:3000 a menos que window.API_BASE_URL se sobreescriba manualmente.
-const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL)
-  ? window.API_BASE_URL
-  : 'http://localhost:3000/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 let currentUser = null;
 let currentPage = 1;
 

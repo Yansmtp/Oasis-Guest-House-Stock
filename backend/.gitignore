@@ -22,7 +22,6 @@ build/
 
 # Prisma
 prisma/*.db
-prisma/migrations/
 
 # Logs
 logs/

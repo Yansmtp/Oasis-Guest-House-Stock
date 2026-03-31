@@ -22,62 +22,10 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
     return join(__dirname, '..', '..', '..', '..');
   }
 
-  private getDefaultBackupDir() {
-    return process.env.MAINTENANCE_BACKUP_DIR || join(homedir(), 'InventoryBackups');
-  }
-
-  private ensureBackupDir(dir: string) {
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-  }
-
-  private resolveBackupDir(dir?: string) {
-    const root = this.getRepoRoot();
-    const target = (dir || '').trim() || this.getDefaultBackupDir();
-    return isAbsolute(target) ? target : join(root, target);
-  }
-
-  async onModuleInit() {
-    this.autoBackupEnabled = String(process.env.MAINTENANCE_AUTO_BACKUP ?? 'true').toLowerCase() !== 'false';
-    const parsedHours = Number(process.env.MAINTENANCE_AUTO_BACKUP_HOURS ?? '24');
-    this.autoBackupIntervalHours = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 24;
-
-    const backupDir = this.resolveBackupDir();
-    this.ensureBackupDir(backupDir);
-
-    if (!this.autoBackupEnabled) return;
-
-    const intervalMs = this.autoBackupIntervalHours * 60 * 60 * 1000;
-    setTimeout(() => this.runAutoBackup(), 10000);
-    this.autoBackupTimer = setInterval(() => this.runAutoBackup(), intervalMs);
-  }
-
-  onModuleDestroy() {
-    if (this.autoBackupTimer) {
-      clearInterval(this.autoBackupTimer);
-      this.autoBackupTimer = null;
-    }
-  }
-
-  private async runAutoBackup() {
-    try {
-      await this.backup(this.getDefaultBackupDir(), true);
-    } catch (error) {
-      const message = String((error as any)?.message || error || '');
-      this.logger.error(`Auto backup fallo: ${message}`);
-      if (/pg_dump/i.test(message)) {
-        this.logger.warn('Auto backup desactivado en esta ejecucion: pg_dump no disponible');
-        this.autoBackupEnabled = false;
-        if (this.autoBackupTimer) {
-          clearInterval(this.autoBackupTimer);
-          this.autoBackupTimer = null;
-        }
-      }
-    }
-  }
-
   private runPowerShell(scriptPath: string, args: string[] = []): Promise<string> {
+    if (process.platform !== 'win32') {
+      throw new InternalServerErrorException('Backup/restore no disponible en este entorno (PowerShell requerido)');
+    }
     return new Promise((resolve, reject) => {
       execFile(
         'powershell',
