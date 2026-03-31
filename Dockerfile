@@ -18,4 +18,5 @@ RUN npm run build
 EXPOSE 3000
 
 # Start application
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main"]
+# Aplica las migraciones pendientes y arranca el servidor
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
