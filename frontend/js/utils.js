@@ -1,15 +1,10 @@
-// Desarrollo local: siempre usa backend en localhost:3000 a menos que window.API_BASE_URL se sobreescriba manualmente.
-if (typeof window !== 'undefined' && !window.API_BASE_URL) {
-    // Priorizamos la URL de Railway para asegurar el funcionamiento en producción y en pruebas locales vinculadas.
-    window.API_BASE_URL = 'https://oasis-guest-house-stock-ok.up.railway.app/api';
-    
-    // Si en el futuro necesitas usar un backend local, puedes descomentar estas líneas:
-    // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    //     window.API_BASE_URL = 'http://localhost:3000/api';
-    // }
-}
+// Configuración de la API: Siempre apunta al backend de Railway para el funcionamiento en la nube.
+// URL del Backend: https://oasis-guest-house-stock-ok.up.railway.app
+const API_BASE_URL = 'https://oasis-guest-house-stock-ok.up.railway.app/api';
 
-const API_BASE_URL = window.API_BASE_URL;
+// Exponemos la URL globalmente para asegurar que todos los módulos la utilicen.
+window.API_BASE_URL = API_BASE_URL;
+
 let currentUser = null;
 let currentPage = 1;
 
