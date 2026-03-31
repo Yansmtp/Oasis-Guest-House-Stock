@@ -13,6 +13,7 @@ import { CompanyModule } from './company/company.module';
 import { CurrenciesModule } from './currencies/currencies.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { UsersModule } from './users/users.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
