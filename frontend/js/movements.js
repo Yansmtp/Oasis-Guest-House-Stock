@@ -819,7 +819,9 @@ async function getCompanyLogoForDocument() {
 
         const backendBase = (typeof API_BASE_URL !== 'undefined')
             ? API_BASE_URL.replace(/\/api\/?$/, '')
-            : `${window.location.protocol}//${window.location.hostname}:3000`;
+            : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:3000'
+                : 'https://oasis-guest-house-stock-ok.up.railway.app');
 
         let logoUrl = String(company.logo).replace(/\\/g, '/');
         if (/^https?:\/\//i.test(logoUrl)) {

@@ -109,6 +109,6 @@ async function bootstrap() {
   }
 
   await app.listen(port);
-  console.log(`🚀 Aplicación corriendo en: http://localhost:${port}`);
+  console.log(`🚀 Aplicación corriendo en el puerto: ${port}`);
 }
 bootstrap();
