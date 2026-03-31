@@ -3,13 +3,13 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
-# Install dependencies
-COPY backend/package*.json backend/tsconfig*.json backend/prisma ./backend/
+# Copiar configuración y dependencias
+COPY backend/package*.json backend/tsconfig*.json backend/nest-cli.json* ./backend/
+COPY backend/prisma ./backend/prisma
 RUN cd backend && npm ci
 
-# Copy source
-COPY backend/src ./backend/src
-COPY backend/prisma ./backend/prisma
+# Copiar el resto del código fuente del backend
+COPY backend ./backend
 
 # Build
 RUN cd backend && npm run build
