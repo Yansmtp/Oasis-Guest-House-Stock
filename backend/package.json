@@ -18,8 +18,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "db:backup": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\db-backup.ps1",
-    "db:reset": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\db-reset.ps1 -Force",
+    "db:backup:win": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\db-backup.ps1",
+    "db:reset:win": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\db-reset.ps1 -Force",
     "postinstall": "prisma generate"
   },
   "dependencies": {
