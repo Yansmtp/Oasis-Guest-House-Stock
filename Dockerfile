@@ -14,8 +14,11 @@ COPY backend ./backend
 # Build
 RUN cd backend && npm run build
 
+# Set working directory for the application
+WORKDIR /app/backend
+
 # Expose port used by Nest (configurable via PORT env)
 EXPOSE 3000
 
 # Start application
-CMD ["node", "backend/dist/main"]
+CMD ["node", "dist/main"]
