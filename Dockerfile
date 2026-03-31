@@ -18,5 +18,5 @@ RUN npm run build
 EXPOSE 3000
 
 # Start application
-# Ejecuta las migraciones de Prisma antes de iniciar la aplicación
-CMD npx prisma migrate deploy && node dist/main
+# Sincroniza el esquema con la base de datos y luego inicia la aplicación
+CMD npx prisma db push --accept-data-loss && node dist/main
