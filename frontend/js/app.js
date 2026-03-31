@@ -1,3 +1,10 @@
+// Configuración de la API según el entorno
+if (typeof API_BASE_URL === 'undefined') {
+    window.API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3000/api'
+        : 'https://oasis-guest-house-stock-ok.up.railway.app/api';
+}
+
 // Navegación entre secciones
 function showSection(sectionId) {
     if (sectionId === 'company' && !isAdmin()) {

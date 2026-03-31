@@ -12,7 +12,7 @@ import { resolveUploadsRoot } from './shared/utils/uploads-root';
 class LogoUrlInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
-    const protocol = req.protocol;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.get('host');
 
     const isPlainObject = (v: any) => v && typeof v === 'object' && v.constructor === Object;
@@ -48,6 +48,8 @@ class LogoUrlInterceptor implements NestInterceptor {
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Confiar en el proxy para detectar HTTPS correctamente (Railway)
+  app.set('trust proxy', 1);
   const configService = app.get(ConfigService);
   // Seguridad
   // Aplicamos helmet y permitimos carga cross-origin de recursos estáticos
@@ -59,13 +61,10 @@ async function bootstrap() {
     console.warn('crossOriginResourcePolicy no disponible en helmet:', e);
   }
 
-  // Simplify CORS: reflect the request origin when present; fallback to "*"
-  const allowedOrigins = parseAllowedOrigins(
-    configService.get('FRONTEND_URLS') || configService.get('FRONTEND_URL')
-  );
+  const frontendUrl = configService.get('FRONTEND_URL') || 'https://oasis-guest-house-stock.vercel.app';
 
   app.enableCors({
-    origin: true,
+    origin: [frontendUrl, 'http://localhost:5500', 'http://127.0.0.1:5500'],
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Authorization', 'Accept'],
@@ -106,4 +105,3 @@ async function bootstrap() {
   console.log(`🚀 Aplicación corriendo en: http://localhost:${port}`);
 }
 bootstrap();
-

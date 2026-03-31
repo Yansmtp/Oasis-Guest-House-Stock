@@ -3,7 +3,9 @@ function resolveCompanyLogoUrl(logoPath) {
 
     const backendBase = (typeof API_BASE_URL !== 'undefined')
         ? API_BASE_URL.replace(/\/api\/?$/, '')
-        : `${window.location.protocol}//${window.location.hostname}:3000`;
+        : (window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : 'https://oasis-guest-house-stock-ok.up.railway.app');
 
     if (/^https?:\/\//i.test(logoPath)) {
         const u = new URL(logoPath);
