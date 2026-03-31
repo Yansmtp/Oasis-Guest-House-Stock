@@ -2,6 +2,10 @@ let costCenters = [];
 let currentCostCenterPage = 1;
 let totalCostCenterPages = 1;
 
+function generateAutoCode(prefix) {
+    return `${prefix}${Date.now().toString().slice(-8)}`;
+}
+
 // Cargar centros de costo
 async function loadCostCenters(page = 1, search = '') {
     try {
@@ -42,6 +46,7 @@ function renderCostCentersTable() {
     
     costCenters.forEach(center => {
         const row = document.createElement('tr');
+        const canDelete = isAdmin();
         
         row.innerHTML = `
             <td>${center.code}</td>
@@ -59,9 +64,10 @@ function renderCostCentersTable() {
                 <button class="btn btn-sm btn-outline" onclick="editCostCenter(${center.id})" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
+                ${canDelete ? `
                 <button class="btn btn-sm btn-outline" onclick="deleteCostCenter(${center.id})" title="Eliminar">
                     <i class="fas fa-trash"></i>
-                </button>
+                </button>` : ''}
                 <button class="btn btn-sm btn-outline" onclick="viewCostCenterMovements(${center.id})" title="Movimientos">
                     <i class="fas fa-exchange-alt"></i>
                 </button>
@@ -83,6 +89,7 @@ function showAddCostCenterModal() {
     resetForm('cost-center-form');
     document.getElementById('cost-center-modal-title').textContent = 'Nuevo Centro de Costo';
     document.getElementById('cost-center-id').value = '';
+    document.getElementById('cost-center-code').value = generateAutoCode('CC-');
     showModal('cost-center-modal');
 }
 
