@@ -78,6 +78,9 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
   }
 
   private runPowerShell(scriptPath: string, args: string[] = []): Promise<string> {
+    if (process.platform !== 'win32') {
+      throw new InternalServerErrorException('Backup/restore no disponible en este entorno (PowerShell requerido)');
+    }
     return new Promise((resolve, reject) => {
       execFile(
         'powershell',

@@ -31,5 +31,6 @@ import { UsersModule } from './users/users.module';
     MaintenanceModule,
     UsersModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
