@@ -1,13 +1,21 @@
 // Desarrollo local: siempre usa backend en localhost:3000 a menos que window.API_BASE_URL se sobreescriba manualmente.
 if (typeof window !== 'undefined' && !window.API_BASE_URL) {
-    window.API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? `${window.location.protocol}//${window.location.hostname}:3000/api`
-        : 'https://oasis-guest-house-stock-ok.up.railway.app/api';
+    // Priorizamos la URL de Railway para asegurar el funcionamiento en producción y en pruebas locales vinculadas.
+    window.API_BASE_URL = 'https://oasis-guest-house-stock-ok.up.railway.app/api';
+    
+    // Si en el futuro necesitas usar un backend local, puedes descomentar estas líneas:
+    // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    //     window.API_BASE_URL = 'http://localhost:3000/api';
+    // }
 }
 
 const API_BASE_URL = window.API_BASE_URL;
 let currentUser = null;
 let currentPage = 1;
+
+function getBackendBaseUrl() {
+    return (window.API_BASE_URL || API_BASE_URL).replace(/\/api\/?$/, '');
+}
 
 const BRAND_LOGO_ASSETS = {
     dark: 'img/logo-light.png',
@@ -558,6 +566,7 @@ function verifySectionsExist() {
 
 window.verifySectionsExist = verifySectionsExist;
 window.applyContextBrandLogos = applyContextBrandLogos;
+window.getBackendBaseUrl = getBackendBaseUrl;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {

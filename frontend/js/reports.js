@@ -40,11 +40,9 @@ async function loadCurrencyOptions(selectId, selectedCode = 'USD') {
 
 function normalizeLogoUrl(logoPath) {
     if (!logoPath) return null;
-    const backendBase = (typeof API_BASE_URL !== 'undefined')
-        ? API_BASE_URL.replace(/\/api\/?$/, '')
-        : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://localhost:3000' 
-            : 'https://oasis-guest-house-stock-ok.up.railway.app');
+    const backendBase = (typeof getBackendBaseUrl === 'function')
+        ? getBackendBaseUrl()
+        : API_BASE_URL.replace(/\/api\/?$/, '');
 
     if (/^https?:\/\//i.test(logoPath)) {
         const u = new URL(logoPath);
