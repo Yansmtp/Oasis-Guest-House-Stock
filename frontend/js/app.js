@@ -1,5 +1,10 @@
 // Navegación entre secciones
 function showSection(sectionId) {
+    if (sectionId === 'company' && !isAdmin()) {
+        showAlert('Solo administradores pueden entrar a Configuración', 'warning');
+        return;
+    }
+
     // Ocultar todas las secciones
     const sections = document.querySelectorAll('.section');
     sections.forEach(section => {
@@ -33,6 +38,9 @@ function showSection(sectionId) {
                 loadCompanyInfo();
                 if (typeof loadCurrencySettings === 'function') {
                     loadCurrencySettings();
+                }
+                if (typeof loadUsers === 'function') {
+                    loadUsers();
                 }
                 break;
         }
@@ -119,7 +127,7 @@ function initApp() {
 
     // Configurar navegación
     document.addEventListener('click', (e) => {
-        const link = e.target.closest('.nav-link');
+        const link = e.target.closest('.nav-link, .navbar-brand-link');
         if (!link) return;
 
         e.preventDefault();

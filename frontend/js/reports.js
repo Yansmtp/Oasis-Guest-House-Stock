@@ -40,21 +40,240 @@ async function loadCurrencyOptions(selectId, selectedCode = 'USD') {
 
 function normalizeLogoUrl(logoPath) {
     if (!logoPath) return null;
-    if (/^https?:\/\//i.test(logoPath)) return logoPath;
-    if (typeof API_BASE_URL !== 'undefined') {
-        return API_BASE_URL.replace(/\/$/, '') + '/' + logoPath.replace(/^\//, '');
+    const backendBase = (typeof API_BASE_URL !== 'undefined')
+        ? API_BASE_URL.replace(/\/api\/?$/, '')
+        : `${window.location.protocol}//${window.location.hostname}:3000`;
+
+    if (/^https?:\/\//i.test(logoPath)) {
+        const u = new URL(logoPath);
+        if (!u.pathname.startsWith('/uploads/')) return null;
+        return `${u.origin}${u.pathname}`;
     }
-    return logoPath.startsWith('/') ? logoPath : '/' + logoPath;
+
+    const normalized = String(logoPath).replace(/\\/g, '/');
+    if (normalized.startsWith('/uploads/')) {
+        return `${backendBase}${normalized}`;
+    }
+    if (normalized.includes('/uploads/')) {
+        return `${backendBase}${normalized.substring(normalized.indexOf('/uploads/'))}`;
+    }
+
+    return null;
 }
 
 async function getCompanyLogoUrl() {
     try {
         const company = await apiRequest('/company');
-        return normalizeLogoUrl(company?.logo);
+        const logoUrl = normalizeLogoUrl(company?.logo);
+        if (!logoUrl) return null;
+        const cacheKey = company?.updatedAt ? new Date(company.updatedAt).getTime() : Date.now();
+        return `${logoUrl}${logoUrl.includes('?') ? '&' : '?'}v=${cacheKey}`;
     } catch (error) {
         console.warn('getCompanyLogoUrl: no se pudo cargar el logo', error);
         return null;
     }
+}
+
+function formatExchangeRateHeader(exchangeRateInfo) {
+    if (!exchangeRateInfo) return '';
+    const usdToCup = parseNumberSafe(exchangeRateInfo.usdToCup);
+    const cupToUsd = parseNumberSafe(exchangeRateInfo.cupToUsd);
+    if (!usdToCup || !cupToUsd) return '';
+    const atText = exchangeRateInfo.at ? formatDate(exchangeRateInfo.at) : '';
+    return `
+        <p class="text-muted mb-2">
+            Tasa usada: 1 USD = ${formatNumber(usdToCup)} CUP | 1 CUP = ${formatNumber(cupToUsd)} USD
+            ${atText ? `(${atText})` : ''}
+        </p>
+    `;
+}
+
+function formatCurrencyWithEquivalent(amount, currencyCode, exchangeRateInfo) {
+    const code = String(currencyCode || 'USD').toUpperCase();
+    const base = formatCurrency(amount, code);
+    if (!exchangeRateInfo) return `<span class="report-currency">${base}</span>`;
+
+    const usdToCup = parseNumberSafe(exchangeRateInfo.usdToCup);
+    const cupToUsd = parseNumberSafe(exchangeRateInfo.cupToUsd);
+    if (!usdToCup || !cupToUsd) return `<span class="report-currency">${base}</span>`;
+
+    if (code === 'USD') {
+        const cup = parseNumberSafe(amount) * usdToCup;
+        return `<span class="report-currency">${base} (${formatCurrency(cup, 'CUP')})</span>`;
+    }
+    if (code === 'CUP') {
+        const usd = parseNumberSafe(amount) * cupToUsd;
+        return `<span class="report-currency">${base} (${formatCurrency(usd, 'USD')})</span>`;
+    }
+    return `<span class="report-currency">${base}</span>`;
+}
+
+async function loadSelectOptionsFromApi(selectId, endpoint, placeholder) {
+    try {
+        const response = await apiRequest(endpoint) || {};
+        const list = Array.isArray(response.data) ? response.data : [];
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+        list.forEach(item => {
+            const option = document.createElement('option');
+            option.value = String(item.id);
+            option.textContent = `${item.code || ''} - ${item.name || ''}`.trim();
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error(`Error loading options for ${selectId}:`, error);
+    }
+}
+
+function getMovementReportTypeLabel(type) {
+    if (type === 'ENTRADA') return 'Entradas';
+    if (type === 'SALIDA') return 'Salidas';
+    return 'Entradas y Salidas';
+}
+
+let lastMovementsReportContext = null;
+
+function getInvoiceCounterStorageKey(year2Digits) {
+    return `oasis_invoice_seq_${year2Digits}`;
+}
+
+function nextInvoiceNumber() {
+    const now = new Date();
+    const year2 = String(now.getFullYear()).slice(-2);
+    const key = getInvoiceCounterStorageKey(year2);
+    const current = parseInt(localStorage.getItem(key) || '0', 10);
+    const next = Number.isFinite(current) ? current + 1 : 1;
+    localStorage.setItem(key, String(next));
+    return `FCT${year2}${String(next).padStart(4, '0')}`;
+}
+
+async function getCompanyInfoSafe() {
+    try {
+        const company = await apiRequest('/company');
+        return company || {};
+    } catch (error) {
+        console.warn('No se pudo cargar info de empresa para factura', error);
+        return {};
+    }
+}
+
+function applyMovementReportFilterRules() {
+    const typeEl = document.getElementById('movement-report-type');
+    const clientEl = document.getElementById('movement-report-client');
+    const costCenterEl = document.getElementById('movement-report-cost-center');
+    const clientLabel = document.getElementById('movement-report-client-label');
+    const costCenterLabel = document.getElementById('movement-report-cost-center-label');
+    const helperEl = document.getElementById('movement-report-filter-helper');
+    if (!typeEl || !clientEl || !costCenterEl) return;
+
+    const type = typeEl.value || '';
+
+    clientEl.disabled = false;
+    costCenterEl.disabled = false;
+
+    if (type === 'ENTRADA') {
+        costCenterEl.value = '';
+        costCenterEl.disabled = true;
+        if (clientLabel) clientLabel.textContent = 'Proveedor (Cliente)';
+        if (costCenterLabel) costCenterLabel.textContent = 'Centro de Costo (No aplica para Entradas)';
+        if (helperEl) helperEl.textContent = 'En Entradas solo se filtra por proveedor.';
+        return;
+    }
+
+    if (type === 'SALIDA') {
+        clientEl.value = '';
+        clientEl.disabled = true;
+        if (clientLabel) clientLabel.textContent = 'Proveedor (No aplica para Salidas)';
+        if (costCenterLabel) costCenterLabel.textContent = 'Centro de Costo';
+        if (helperEl) helperEl.textContent = 'En Salidas solo se filtra por centro de costo.';
+        return;
+    }
+
+    if (clientLabel) clientLabel.textContent = 'Proveedor (Cliente)';
+    if (costCenterLabel) costCenterLabel.textContent = 'Centro de Costo';
+    if (helperEl) helperEl.textContent = 'En reporte total puede usar ambos filtros.';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function downloadExcelHtml(filename, htmlBody) {
+    const excelHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]><xml>
+                <x:ExcelWorkbook>
+                    <x:ExcelWorksheets>
+                        <x:ExcelWorksheet>
+                            <x:Name>Reporte</x:Name>
+                            <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                        </x:ExcelWorksheet>
+                    </x:ExcelWorksheets>
+                </x:ExcelWorkbook>
+                </xml><![endif]-->
+                <style>
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td { border: 1px solid #d0d0d0; padding: 6px; font-size: 12px; }
+                    th { background: #f2f5f9; font-weight: 700; }
+                    .title { font-size: 16px; font-weight: 700; }
+                    .subtitle { font-size: 12px; color: #444; }
+                </style>
+            </head>
+            <body>${htmlBody}</body>
+        </html>
+    `;
+
+    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${filename}.xls`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+async function downloadExcelFromApi(endpoint, filenameFallback = 'reporte.xlsx') {
+    const token = (typeof getToken === 'function') ? getToken() : localStorage.getItem('token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, { method: 'GET', headers });
+    if (!response.ok) {
+        let message = `Error ${response.status}`;
+        try {
+            const json = await response.json();
+            message = json.message || message;
+        } catch (e) {
+            // noop
+        }
+        throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get('content-disposition') || '';
+    const match = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+    const filename = match?.[1] || filenameFallback;
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 // Mostrar reporte de stock
@@ -82,6 +301,7 @@ async function showStockReport(currencyCode = 'USD') {
                     </div>
                 </div>
                 <div class="card-body">
+                    ${formatExchangeRateHeader(summary.exchangeRateInfo)}
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-icon bg-primary">
@@ -108,7 +328,7 @@ async function showStockReport(currencyCode = 'USD') {
                                 <i class="fas fa-dollar-sign"></i>
                             </div>
                             <div class="stat-info">
-                                <h3>${formatCurrency(summary.totalValue ?? 0, summary.currency || currencyCode)}</h3>
+                                <h3>${formatCurrencyWithEquivalent(summary.totalValue ?? 0, summary.currency || currencyCode, summary.exchangeRateInfo)}</h3>
                                 <p>Valor Total</p>
                             </div>
                         </div>
@@ -137,8 +357,8 @@ async function showStockReport(currencyCode = 'USD') {
                                         <td>${formatUnit(product?.unit)}</td>
                                         <td>${formatNumber(product?.stock || 0)}</td>
                                         <td>${formatNumber(product?.minStock || 0)}</td>
-                                        <td>${formatCurrency((product?.unitCostReport !== undefined ? product.unitCostReport : product?.unitCost) || 0, summary.currency || currencyCode)}</td>
-                                        <td>${formatCurrency((product?.totalValueReport !== undefined ? product.totalValueReport : (product?.stock || 0) * (product?.unitCost || 0)), summary.currency || currencyCode)}</td>
+                                        <td>${formatCurrencyWithEquivalent((product?.unitCostReport !== undefined ? product.unitCostReport : product?.unitCost) || 0, summary.currency || currencyCode, summary.exchangeRateInfo)}</td>
+                                        <td>${formatCurrencyWithEquivalent((product?.totalValueReport !== undefined ? product.totalValueReport : (product?.stock || 0) * (product?.unitCost || 0)), summary.currency || currencyCode, summary.exchangeRateInfo)}</td>
                                         <td>
                                             <span class="status-badge status-low">
                                                 Bajo Stock
@@ -175,8 +395,8 @@ async function showStockReport(currencyCode = 'USD') {
                                         <td>${formatNumber(product?.stock || 0)}</td>
                                         <td>${formatNumber(product?.minStock || 0)}</td>
                                         <td>${product?.maxStock ? formatNumber(product.maxStock) : '-'}</td>
-                                        <td>${formatCurrency((product?.unitCostReport !== undefined ? product.unitCostReport : product?.unitCost) || 0, summary.currency || currencyCode)}</td>
-                                        <td>${formatCurrency((product?.totalValueReport !== undefined ? product.totalValueReport : (product?.stock || 0) * (product?.unitCost || 0)), summary.currency || currencyCode)}</td>
+                                        <td>${formatCurrencyWithEquivalent((product?.unitCostReport !== undefined ? product.unitCostReport : product?.unitCost) || 0, summary.currency || currencyCode, summary.exchangeRateInfo)}</td>
+                                        <td>${formatCurrencyWithEquivalent((product?.totalValueReport !== undefined ? product.totalValueReport : (product?.stock || 0) * (product?.unitCost || 0)), summary.currency || currencyCode, summary.exchangeRateInfo)}</td>
                                         <td>
                                             <span class="status-badge ${(parseNumberSafe(product?.stock || 0)) <= (parseNumberSafe(product?.minStock || 0)) ? 'status-low' : 'status-active'}">
                                                 ${(parseNumberSafe(product?.stock || 0)) <= (parseNumberSafe(product?.minStock || 0)) ? 'Bajo Stock' : 'Normal'}
@@ -208,50 +428,104 @@ async function showStockReport(currencyCode = 'USD') {
 
 // Mostrar reporte de movimientos
 async function showMovementsReport() {
+    lastMovementsReportContext = null;
     const html = `
-        <div class="card">
-            <div class="card-header">
+        <div class="card movements-report-panel">
+            <div class="card-header movements-report-header">
                 <h3><i class="fas fa-exchange-alt"></i> Reporte de Movimientos</h3>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
+            <div class="card-body movements-report-body">
+                <div class="row movements-report-filters">
+                    <div class="col-md-3">
                         <div class="form-group">
                             <label>Fecha Inicio</label>
                             <input type="date" id="movement-report-start" class="form-control" 
                                    value="${new Date().toISOString().split('T')[0]}">
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <div class="form-group">
                             <label>Fecha Fin</label>
                             <input type="date" id="movement-report-end" class="form-control" 
                                    value="${new Date().toISOString().split('T')[0]}">
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Tipo de Reporte</label>
+                            <select id="movement-report-type" class="form-control">
+                                <option value="">Total (Entradas y Salidas)</option>
+                                <option value="ENTRADA">Solo Entradas</option>
+                                <option value="SALIDA">Solo Salidas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
                         <div class="form-group">
                             <label>Moneda del Reporte</label>
                             <select id="movement-report-currency" class="form-control no-print"></select>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label id="movement-report-client-label">Proveedor (Cliente)</label>
+                            <select id="movement-report-client" class="form-control">
+                                <option value="">Todos los proveedores</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label id="movement-report-cost-center-label">Centro de Costo</label>
+                            <select id="movement-report-cost-center" class="form-control">
+                                <option value="">Todos los centros de costo</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary" id="generate-movements-btn" onclick="generateMovementsReport()">
+                <small id="movement-report-filter-helper" class="text-muted d-block mt-2 movements-report-helper">En reporte total puede usar ambos filtros.</small>
+                <div class="d-flex gap-2 movements-report-actions">
+                    <button type="button" class="btn btn-primary" id="generate-movements-btn">
                         <i class="fas fa-chart-bar"></i> Generar Reporte
                     </button>
-                    <button class="btn btn-secondary" id="print-movements-btn" onclick="printMovementsReport()" disabled>
+                    <button type="button" class="btn btn-secondary" id="print-movements-btn" onclick="printMovementsReport()" disabled>
                         <i class="fas fa-print"></i> Imprimir
+                    </button>
+                    <button type="button" class="btn btn-success" id="export-movements-excel-btn" onclick="exportMovementsReportExcel()" disabled>
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </button>
+                    <button type="button" class="btn btn-warning" id="invoice-movements-btn" onclick="generateMovementReportInvoice()" disabled>
+                        <i class="fas fa-file-invoice"></i> Generar Factura
+                    </button>
+                    <button type="button" class="btn btn-success" id="export-invoice-excel-btn" onclick="exportMovementInvoiceExcel()" disabled>
+                        <i class="fas fa-file-excel"></i> Factura Excel
                     </button>
                 </div>
             </div>
         </div>
         
-        <div id="movement-report-result"></div>
+        <div id="movement-report-result" class="movements-report-result"></div>
     `;
     
     document.getElementById('report-content').innerHTML = html;
-    await loadCurrencyOptions('movement-report-currency', 'USD');
+    await Promise.all([
+        loadCurrencyOptions('movement-report-currency', 'USD'),
+        loadSelectOptionsFromApi('movement-report-client', '/clients?activeOnly=true&limit=1000', 'Todos los proveedores'),
+        loadSelectOptionsFromApi('movement-report-cost-center', '/cost-centers?activeOnly=true&limit=1000', 'Todos los centros de costo'),
+    ]);
+
+    const btn = document.getElementById('generate-movements-btn');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            try { generateMovementsReport(); } catch (e) { console.error('generateMovementsReport click error', e); }
+        });
+    }
+
+    const typeEl = document.getElementById('movement-report-type');
+    if (typeEl) {
+        typeEl.addEventListener('change', applyMovementReportFilterRules);
+    }
+    applyMovementReportFilterRules();
 }
 
 // Generar reporte de movimientos
@@ -259,6 +533,11 @@ async function generateMovementsReport() {
     const startDate = document.getElementById('movement-report-start').value;
     const endDate = document.getElementById('movement-report-end').value;
     const currency = document.getElementById('movement-report-currency')?.value || 'USD';
+    const type = document.getElementById('movement-report-type')?.value || '';
+    const clientIdRaw = document.getElementById('movement-report-client')?.value || '';
+    const costCenterIdRaw = document.getElementById('movement-report-cost-center')?.value || '';
+    const clientId = type === 'SALIDA' ? '' : clientIdRaw;
+    const costCenterId = type === 'ENTRADA' ? '' : costCenterIdRaw;
     
     if (!startDate || !endDate) {
         showAlert('Por favor, seleccione ambas fechas', 'warning');
@@ -267,20 +546,41 @@ async function generateMovementsReport() {
     
     try {
         showLoading('movement-report-result');
-        
-        const response = await apiRequest(`/movements/movements-report?startDate=${startDate}&endDate=${endDate}&currency=${encodeURIComponent(currency)}`) || {};
+        const params = new URLSearchParams();
+        params.set('startDate', startDate);
+        params.set('endDate', endDate);
+        params.set('currency', currency);
+        if (type) params.set('type', type);
+        if (clientId) params.set('clientId', clientId);
+        if (costCenterId) params.set('costCenterId', costCenterId);
+        const response = await apiRequest(`/movements/movements-report?${params.toString()}`) || {};
         const data = response.data || response || {};
         const summary = data.summary || {};
+        const reportTypeLabel = getMovementReportTypeLabel(type);
+        const clientText = document.getElementById('movement-report-client')?.selectedOptions?.[0]?.textContent || '';
+        const costCenterText = document.getElementById('movement-report-cost-center')?.selectedOptions?.[0]?.textContent || '';
+        const clientFilterText = type === 'SALIDA'
+            ? 'Proveedor: No aplica.'
+            : (clientId ? `Proveedor: ${clientText}.` : 'Todos los proveedores.');
+        const costCenterFilterText = type === 'ENTRADA'
+            ? 'Centro: No aplica.'
+            : (costCenterId ? `Centro: ${costCenterText}.` : 'Todos los centros.');
         
         const html = `
-            <div class="card mt-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Resumen del Período: ${formatDate(startDate)} - ${formatDate(endDate)}</h4>
+            <div class="card mt-4 movements-report-output">
+                <div class="card-header d-flex justify-content-between align-items-center movements-report-output-header">
+                    <h4>${reportTypeLabel}: ${formatDate(startDate)} - ${formatDate(endDate)}</h4>
                     <button class="btn btn-primary" onclick="printMovementsReport()">
                         <i class="fas fa-print"></i> Imprimir
                     </button>
                 </div>
-                <div class="card-body">
+                <div class="card-body movements-report-output-body">
+                    <p class="text-muted mb-2 movements-report-filter-summary">
+                        Filtros:
+                        ${clientFilterText}
+                        ${costCenterFilterText}
+                    </p>
+                    ${formatExchangeRateHeader(summary.exchangeRateInfo)}
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-icon bg-success">
@@ -307,7 +607,7 @@ async function generateMovementsReport() {
                                 <i class="fas fa-dollar-sign"></i>
                             </div>
                             <div class="stat-info">
-                                <h3>${formatCurrency(summary.totalEntriesValue ?? 0, summary.currency || currency)}</h3>
+                                <h3>${formatCurrencyWithEquivalent(summary.totalEntriesValue ?? 0, summary.currency || currency, summary.exchangeRateInfo)}</h3>
                                 <p>Valor Entradas</p>
                             </div>
                         </div>
@@ -317,7 +617,7 @@ async function generateMovementsReport() {
                                 <i class="fas fa-dollar-sign"></i>
                             </div>
                             <div class="stat-info">
-                                <h3>${formatCurrency(summary.totalExitsValue ?? 0, summary.currency || currency)}</h3>
+                                <h3>${formatCurrencyWithEquivalent(summary.totalExitsValue ?? 0, summary.currency || currency, summary.exchangeRateInfo)}</h3>
                                 <p>Valor Salidas</p>
                             </div>
                         </div>
@@ -341,9 +641,9 @@ async function generateMovementsReport() {
                                     <tr>
                                         <td>${item.product?.name || ''}</td>
                                         <td>${formatNumber(item.entries || 0)} ${formatUnit(item.product?.unit)}</td>
-                                        <td>${formatCurrency(item.entriesValue || 0, summary.currency || currency)}</td>
+                                        <td>${formatCurrencyWithEquivalent(item.entriesValue || 0, summary.currency || currency, summary.exchangeRateInfo)}</td>
                                         <td>${formatNumber(item.exits || 0)} ${formatUnit(item.product?.unit)}</td>
-                                        <td>${formatCurrency(item.exitsValue || 0, summary.currency || currency)}</td>
+                                        <td>${formatCurrencyWithEquivalent(item.exitsValue || 0, summary.currency || currency, summary.exchangeRateInfo)}</td>
                                         <td>${formatNumber(item.product?.stock || 0)} ${formatUnit(item.product?.unit)}</td>
                                     </tr>
                                 `).join('')}
@@ -384,7 +684,7 @@ async function generateMovementsReport() {
                                             ).join('<br>')}
                                         </td>
                                         <td>
-                                            ${formatCurrency((movement.reportTotal !== undefined ? movement.reportTotal : (movement.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0)), summary.currency || currency)}
+                                            ${formatCurrencyWithEquivalent((movement.reportTotal !== undefined ? movement.reportTotal : (movement.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0)), summary.currency || currency, summary.exchangeRateInfo)}
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -396,17 +696,221 @@ async function generateMovementsReport() {
         `;
         
         document.getElementById('movement-report-result').innerHTML = html;
+        lastMovementsReportContext = {
+            generatedAt: new Date().toISOString(),
+            filters: {
+                startDate,
+                endDate,
+                type,
+                currency,
+                clientId,
+                costCenterId,
+                clientText,
+                costCenterText,
+            },
+            summary,
+            movements: data.movements || [],
+        };
 
-        // Habilitar botón de impresión en la sección de control
+        // Habilitar boton de impresion en la seccion de control
         const printBtn = document.getElementById('print-movements-btn');
         if (printBtn) printBtn.disabled = false;
+        const exportBtn = document.getElementById('export-movements-excel-btn');
+        if (exportBtn) exportBtn.disabled = !(Array.isArray(data.movements) && data.movements.length > 0);
+        const invoiceBtn = document.getElementById('invoice-movements-btn');
+        if (invoiceBtn) invoiceBtn.disabled = !(Array.isArray(data.movements) && data.movements.length > 0);
+        const exportInvoiceBtn = document.getElementById('export-invoice-excel-btn');
+        if (exportInvoiceBtn) exportInvoiceBtn.disabled = !(Array.isArray(data.movements) && data.movements.length > 0);
         
     } catch (error) {
         console.error('Error generating movements report:', error);
+        lastMovementsReportContext = null;
+        const target = document.getElementById('movement-report-result');
+        if (target) {
+            target.innerHTML = `<div class="alert alert-error"><i class="fas fa-exclamation-circle"></i><span>Error al generar el reporte de movimientos</span></div>`;
+        }
+        const invoiceBtn = document.getElementById('invoice-movements-btn');
+        if (invoiceBtn) invoiceBtn.disabled = true;
+        const exportBtn = document.getElementById('export-movements-excel-btn');
+        if (exportBtn) exportBtn.disabled = true;
+        const exportInvoiceBtn = document.getElementById('export-invoice-excel-btn');
+        if (exportInvoiceBtn) exportInvoiceBtn.disabled = true;
         showAlert('Error al generar el reporte de movimientos', 'error');
     } finally {
         hideLoading();
     }
+}
+
+async function generateMovementReportInvoice() {
+    if (!lastMovementsReportContext || !Array.isArray(lastMovementsReportContext.movements) || lastMovementsReportContext.movements.length === 0) {
+        showAlert('Genere primero un reporte de movimientos con datos', 'warning');
+        return;
+    }
+
+    const ctx = lastMovementsReportContext;
+    const invoiceNumber = nextInvoiceNumber();
+    const company = await getCompanyInfoSafe();
+    const logoUrl = await getCompanyLogoUrl();
+    const reportTypeLabel = getMovementReportTypeLabel(ctx.filters?.type || '');
+    const issueDate = new Date();
+    const summary = ctx.summary || {};
+    const currency = summary.currency || ctx.filters?.currency || 'USD';
+
+    const totalAmount = (parseNumberSafe(summary.totalEntriesValue) || 0) + (parseNumberSafe(summary.totalExitsValue) || 0);
+
+    const headerFilters = [
+        `Tipo: ${reportTypeLabel}`,
+        `Periodo: ${formatDate(ctx.filters?.startDate)} - ${formatDate(ctx.filters?.endDate)}`,
+        ctx.filters?.clientId ? `Proveedor: ${ctx.filters.clientText}` : 'Proveedor: Todos',
+        ctx.filters?.costCenterId ? `Centro: ${ctx.filters.costCenterText}` : 'Centro: Todos',
+    ].join(' | ');
+
+    const rowsHtml = ctx.movements.map((movement, index) => {
+        const movementTotal = (movement.reportTotal !== undefined
+            ? movement.reportTotal
+            : (movement.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0));
+        const partyName = movement.type === 'ENTRADA'
+            ? (movement.client?.name || 'N/A')
+            : (movement.costCenter?.name || 'N/A');
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${formatDate(movement.date)}</td>
+                <td>${movement.documentNumber || '-'}</td>
+                <td>${movement.type === 'ENTRADA' ? 'Entrada' : 'Salida'}</td>
+                <td>${partyName}</td>
+                <td style="text-align:right;">${formatCurrencyWithEquivalent(movementTotal, currency, summary.exchangeRateInfo)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        showAlert('El navegador bloqueó la ventana de factura. Permita pop-ups para este sitio.', 'warning');
+        return;
+    }
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Factura ${invoiceNumber}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 16mm; color: #222; }
+                    .header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+                    .left h1 { margin: 0 0 6px; font-size: 1.35rem; }
+                    .left p { margin: 2px 0; font-size: 0.92rem; }
+                    .right { text-align: right; }
+                    .right .num { font-size: 1.1rem; font-weight: 700; }
+                    .logo { width: 34mm; height: 34mm; object-fit: contain; margin-bottom: 8px; }
+                    .meta { border: 1px solid #d9d9d9; background: #f9fbfd; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 0.9rem; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+                    th, td { border: 1px solid #dadada; padding: 8px; font-size: 0.88rem; vertical-align: top; }
+                    th { background: #f2f5f9; text-align: left; }
+                    .totals { margin-top: 12px; display: flex; justify-content: flex-end; }
+                    .totals-box { min-width: 260px; border: 1px solid #d9d9d9; border-radius: 6px; padding: 10px; }
+                    .totals-line { display: flex; justify-content: space-between; gap: 10px; margin: 4px 0; }
+                    .totals-line strong { font-size: 1rem; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="left">
+                        ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo">` : ''}
+                        <h1>${company?.name || 'Oasis Guest House'}</h1>
+                        ${company?.address ? `<p>${company.address}</p>` : ''}
+                        ${company?.phone ? `<p>Tel: ${company.phone}</p>` : ''}
+                        ${company?.email ? `<p>Email: ${company.email}</p>` : ''}
+                    </div>
+                    <div class="right">
+                        <div class="num">FACTURA: ${invoiceNumber}</div>
+                        <p>Fecha: ${formatDate(issueDate)}</p>
+                    </div>
+                </div>
+
+                <div class="meta">
+                    <div><strong>Origen:</strong> Reporte de movimientos generado en el sistema.</div>
+                    <div><strong>Filtros:</strong> ${headerFilters}</div>
+                    ${formatExchangeRateHeader(summary.exchangeRateInfo)}
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha</th>
+                            <th>Documento</th>
+                            <th>Tipo</th>
+                            <th>Proveedor/Centro</th>
+                            <th style="text-align:right;">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+
+                <div class="totals">
+                    <div class="totals-box">
+                        <div class="totals-line"><span>Total Entradas</span><span>${formatCurrencyWithEquivalent(summary.totalEntriesValue || 0, currency, summary.exchangeRateInfo)}</span></div>
+                        <div class="totals-line"><span>Total Salidas</span><span>${formatCurrencyWithEquivalent(summary.totalExitsValue || 0, currency, summary.exchangeRateInfo)}</span></div>
+                        <div class="totals-line"><strong>Total Factura</strong><strong>${formatCurrencyWithEquivalent(totalAmount, currency, summary.exchangeRateInfo)}</strong></div>
+                    </div>
+                </div>
+            </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 300);
+}
+
+function exportMovementsReportExcel() {
+    if (!lastMovementsReportContext || !Array.isArray(lastMovementsReportContext.movements) || lastMovementsReportContext.movements.length === 0) {
+        showAlert('Genere primero un reporte de movimientos con datos', 'warning');
+        return;
+    }
+
+    const ctx = lastMovementsReportContext;
+    const params = new URLSearchParams();
+    params.set('startDate', ctx.filters?.startDate || '');
+    params.set('endDate', ctx.filters?.endDate || '');
+    params.set('currency', ctx.filters?.currency || 'USD');
+    if (ctx.filters?.type) params.set('type', ctx.filters.type);
+    if (ctx.filters?.clientId) params.set('clientId', String(ctx.filters.clientId));
+    if (ctx.filters?.costCenterId) params.set('costCenterId', String(ctx.filters.costCenterId));
+
+    downloadExcelFromApi(`/reports/movements/export?${params.toString()}`, 'reporte_movimientos.xlsx')
+        .catch((error) => {
+            console.error('Error exportando reporte de movimientos:', error);
+            showAlert(error.message || 'Error al exportar reporte a Excel', 'error');
+        });
+}
+
+function exportMovementInvoiceExcel() {
+    if (!lastMovementsReportContext || !Array.isArray(lastMovementsReportContext.movements) || lastMovementsReportContext.movements.length === 0) {
+        showAlert('Genere primero un reporte de movimientos con datos', 'warning');
+        return;
+    }
+
+    const ctx = lastMovementsReportContext;
+    const params = new URLSearchParams();
+    params.set('startDate', ctx.filters?.startDate || '');
+    params.set('endDate', ctx.filters?.endDate || '');
+    params.set('currency', ctx.filters?.currency || 'USD');
+    if (ctx.filters?.type) params.set('type', ctx.filters.type);
+    if (ctx.filters?.clientId) params.set('clientId', String(ctx.filters.clientId));
+    if (ctx.filters?.costCenterId) params.set('costCenterId', String(ctx.filters.costCenterId));
+    params.set('invoiceNumber', nextInvoiceNumber());
+
+    downloadExcelFromApi(`/reports/movements/invoice-export?${params.toString()}`, 'factura_movimientos.xlsx')
+        .catch((error) => {
+            console.error('Error exportando factura en Excel:', error);
+            showAlert(error.message || 'Error al exportar factura a Excel', 'error');
+        });
 }
 
 // Mostrar reporte por cliente
@@ -525,6 +1029,7 @@ async function generateClientReport() {
                     </button>
                 </div>
                 <div class="card-body">
+                    ${formatExchangeRateHeader(summary.exchangeRateInfo)}
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-icon bg-primary">
@@ -561,7 +1066,7 @@ async function generateClientReport() {
                                 <i class="fas fa-dollar-sign"></i>
                             </div>
                             <div class="stat-info">
-                                <h3>${formatCurrency(summary.totalValue ?? 0, summary.currency || currency)}</h3>
+                                <h3>${formatCurrencyWithEquivalent(summary.totalValue ?? 0, summary.currency || currency, summary.exchangeRateInfo)}</h3>
                                 <p>Valor Total</p>
                             </div>
                         </div>
@@ -583,8 +1088,8 @@ async function generateClientReport() {
                                     <tr>
                                         <td>${item.product?.name || ''}</td>
                                         <td>${formatNumber(item.totalQuantity || 0)} ${formatUnit(item.product?.unit)}</td>
-                                        <td>${formatCurrency(item.totalValue || 0, summary.currency || currency)}</td>
-                                        <td>${formatCurrency((item.totalValue || 0) / (summary.totalMovements || 1), summary.currency || currency)}</td>
+                                        <td>${formatCurrencyWithEquivalent(item.totalValue || 0, summary.currency || currency, summary.exchangeRateInfo)}</td>
+                                        <td>${formatCurrencyWithEquivalent((item.totalValue || 0) / (summary.totalMovements || 1), summary.currency || currency, summary.exchangeRateInfo)}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -621,7 +1126,7 @@ async function generateClientReport() {
                                             ).join('<br>')}
                                         </td>
                                         <td>
-                                            ${formatCurrency((movement.reportTotal !== undefined ? movement.reportTotal : (movement.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0)), summary.currency || currency)}
+                                            ${formatCurrencyWithEquivalent((movement.reportTotal !== undefined ? movement.reportTotal : (movement.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0)), summary.currency || currency, summary.exchangeRateInfo)}
                                         </td>
                                     </tr>
                                 `).join('')}

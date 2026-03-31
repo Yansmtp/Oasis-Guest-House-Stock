@@ -2,6 +2,10 @@ let clients = [];
 let currentClientPage = 1;
 let totalClientPages = 1;
 
+function generateAutoCode(prefix) {
+    return `${prefix}${Date.now().toString().slice(-8)}`;
+}
+
 // Cargar clientes
 async function loadClients(page = 1, search = '') {
     try {
@@ -42,6 +46,7 @@ function renderClientsTable() {
     
     clients.forEach(client => {
         const row = document.createElement('tr');
+        const canDelete = isAdmin();
         
         row.innerHTML = `
             <td>${client.code}</td>
@@ -61,9 +66,10 @@ function renderClientsTable() {
                 <button class="btn btn-sm btn-outline" onclick="editClient(${client.id})" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
+                ${canDelete ? `
                 <button class="btn btn-sm btn-outline" onclick="deleteClient(${client.id})" title="Eliminar">
                     <i class="fas fa-trash"></i>
-                </button>
+                </button>` : ''}
                 <button class="btn btn-sm btn-outline" onclick="viewClientMovements(${client.id})" title="Movimientos">
                     <i class="fas fa-exchange-alt"></i>
                 </button>
@@ -85,6 +91,7 @@ function showAddClientModal() {
     resetForm('client-form');
     document.getElementById('client-modal-title').textContent = 'Nuevo Cliente';
     document.getElementById('client-id').value = '';
+    document.getElementById('client-code').value = generateAutoCode('CLI-');
     showModal('client-modal');
 }
 

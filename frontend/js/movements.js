@@ -6,6 +6,37 @@ let movementProducts = [];
 let movementCurrencies = [];
 let movementCurrencyCode = 'USD';
 let movementCurrencyRate = 1;
+let movementCupRate = 0.0083; // USD por 1 CUP
+let movementRatesLoadedAt = 0;
+let movementRateInputBound = false;
+
+function generateProductCodeFallback() {
+    const yy = String(new Date().getFullYear()).slice(-2);
+    const rand = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    return `PRD${yy}${rand}`;
+}
+
+async function getNextProductCode() {
+    try {
+        const response = await apiRequest('/products/next-code');
+        return response?.code || generateProductCodeFallback();
+    } catch (error) {
+        console.warn('No se pudo obtener el siguiente codigo de producto:', error);
+        return generateProductCodeFallback();
+    }
+}
+
+function generateMovementDocumentCode(type, dateValue) {
+    const date = dateValue ? new Date(dateValue) : new Date();
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    const prefix = type === 'ENTRADA' ? 'ENT' : 'SAL';
+    return `${prefix}-${y}${m}${d}-${hh}${mm}${ss}`;
+}
 
 // Fallback in case utils.js did not attach parseNumberSafe yet.
 var parseNumberSafe = window.parseNumberSafe || function (value) {
@@ -25,10 +56,73 @@ var parseNumberSafe = window.parseNumberSafe || function (value) {
     return isNaN(n) ? 0 : n;
 };
 
+function buildDualCurrencyHtml(amount, currencyCode, rateAtTransaction) {
+    const amountNum = parseNumberSafe(amount);
+    const code = (currencyCode || 'USD').toUpperCase();
+    const rate = parseNumberSafe(rateAtTransaction) > 0 ? parseNumberSafe(rateAtTransaction) : 1;
+
+    const amountUsd = code === 'USD' ? amountNum : amountNum * rate;
+    const cupRate = parseNumberSafe(movementCupRate) > 0 ? parseNumberSafe(movementCupRate) : 0.0083;
+    const amountCup = cupRate > 0 ? amountUsd / cupRate : 0;
+
+    const usdText = formatCurrency(amountUsd, 'USD');
+    const cupText = formatCurrency(amountCup, 'CUP');
+    const originalText = code !== 'USD' && code !== 'CUP' ? `<small>${formatCurrency(amountNum, code)}</small><br>` : '';
+
+    return `${originalText}<small>USD: ${usdText}</small><br><small>CUP: ${cupText}</small>`;
+}
+
+function setMovementRateInputValue(rateUsdPerUnit) {
+    const rateInput = document.getElementById('movement-currency-rate');
+    if (!rateInput) return;
+    const displayValue = rateUsdPerUnit > 0 ? (1 / rateUsdPerUnit) : '';
+    rateInput.value = displayValue ? parseFloat(displayValue).toFixed(6) : '';
+}
+
+function bindMovementRateInput() {
+    const rateInput = document.getElementById('movement-currency-rate');
+    if (!rateInput || movementRateInputBound) return;
+    rateInput.addEventListener('input', () => {
+        const entered = parseNumberSafe(rateInput.value);
+        if (entered > 0) {
+            movementCurrencyRate = 1 / entered;
+            renderMovementDetails();
+        }
+    });
+    movementRateInputBound = true;
+}
+
+function resetMovementRateToDefault() {
+    const select = document.getElementById('movement-currency');
+    const chosen = movementCurrencies.find(c => c.code === (select?.value || movementCurrencyCode));
+    if (!chosen) return;
+    movementCurrencyRate = chosen.rate || 1;
+    setMovementRateInputValue(movementCurrencyRate);
+    renderMovementDetails();
+}
+
+async function refreshMovementCurrencyRates(force = false) {
+    const now = Date.now();
+    if (!force && movementRatesLoadedAt && (now - movementRatesLoadedAt) < 300000) return;
+
+    try {
+        const response = await apiRequest('/currencies');
+        const list = response?.data || [];
+        const cup = list.find(c => (c.code || '').toUpperCase() === 'CUP');
+        if (cup?.rate && parseNumberSafe(cup.rate) > 0) {
+            movementCupRate = parseNumberSafe(cup.rate);
+        }
+        movementRatesLoadedAt = now;
+    } catch (error) {
+        console.warn('No se pudo refrescar tasa CUP para movimientos:', error);
+    }
+}
+
 // Cargar movimientos
 async function loadMovements(page = 1, filters = {}) {
     try {
         showLoading('movements-table');
+        await refreshMovementCurrencyRates();
         
         let url = `/movements?page=${page}&limit=10`;
         
@@ -83,6 +177,7 @@ function renderMovementsTable() {
     
     movements.forEach(movement => {
         const row = document.createElement('tr');
+        const canDelete = isAdmin();
         
         // Determinar cliente o centro de costo
         let entity = '';
@@ -98,6 +193,8 @@ function renderMovementsTable() {
             console.debug('renderMovementsTable: movement with non-numeric detail totals', movement.id, badDetails);
         }
         const total = (movement.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0);
+        const currency = movement.currencyCode || 'USD';
+        const rateAtTransaction = parseNumberSafe(movement.rateAtTransaction) || 1;
         
         // Contar productos
         const productCount = movement.details.length;
@@ -113,11 +210,15 @@ function renderMovementsTable() {
             <td>${entity}</td>
             <td>${movement.description || ''}</td>
             <td>${productCount} producto(s)</td>
-            <td>${formatCurrency(total)}</td>
+            <td>${buildDualCurrencyHtml(total, currency, rateAtTransaction)}</td>
             <td class="actions">
                 <button class="btn btn-sm btn-outline" onclick="viewMovement(${movement.id})" title="Ver">
                     <i class="fas fa-eye"></i>
                 </button>
+                ${canDelete ? `
+                <button class="btn btn-sm btn-danger" onclick="deleteMovement(${movement.id})" title="Eliminar">
+                    <i class="fas fa-trash"></i>
+                </button>` : ''}
                 <button class="btn btn-sm btn-outline" onclick="printVoucher(${movement.id})" title="Imprimir">
                     <i class="fas fa-print"></i>
                 </button>
@@ -157,18 +258,36 @@ async function showMovementModal(type) {
     
     document.getElementById('movement-type').value = type;
     document.getElementById('movement-date').value = new Date().toISOString().slice(0, 16);
+    document.getElementById('movement-document').value = generateMovementDocumentCode(
+        type,
+        document.getElementById('movement-date').value
+    );
+    const movementDateEl = document.getElementById('movement-date');
+    const movementDocEl = document.getElementById('movement-document');
+    if (movementDateEl && movementDocEl) {
+        movementDateEl.onchange = () => {
+            if (!movementDocEl.value || /^ENT-|^SAL-/.test(movementDocEl.value)) {
+                movementDocEl.value = generateMovementDocumentCode(type, movementDateEl.value);
+            }
+        };
+    }
+    await refreshMovementCurrencyRates();
     
     // Configurar campos según tipo
     if (type === 'ENTRADA') {
         document.getElementById('movement-client-section').style.display = 'block';
         document.getElementById('movement-cost-center-section').style.display = 'none';
         document.getElementById('movement-client-label').textContent = 'Proveedor *';
+        document.getElementById('movement-client').setAttribute('required', 'required');
+        document.getElementById('movement-cost-center').removeAttribute('required');
         document.getElementById('movement-currency-row').style.display = 'flex';
         await loadCurrenciesForMovement();
         await loadClientsForMovement('movement-client');
     } else {
         document.getElementById('movement-client-section').style.display = 'none';
         document.getElementById('movement-cost-center-section').style.display = 'block';
+        document.getElementById('movement-cost-center').setAttribute('required', 'required');
+        document.getElementById('movement-client').removeAttribute('required');
         document.getElementById('movement-currency-row').style.display = 'none';
         movementCurrencyCode = 'USD';
         movementCurrencyRate = 1;
@@ -183,6 +302,10 @@ async function loadCurrenciesForMovement() {
     try {
         const response = await apiRequest('/currencies');
         movementCurrencies = response?.data || [];
+        const cup = movementCurrencies.find(c => (c.code || '').toUpperCase() === 'CUP');
+        if (cup?.rate && parseNumberSafe(cup.rate) > 0) {
+            movementCupRate = parseNumberSafe(cup.rate);
+        }
         const select = document.getElementById('movement-currency');
         const rateInput = document.getElementById('movement-currency-rate');
 
@@ -200,7 +323,7 @@ async function loadCurrenciesForMovement() {
         if (selected) {
             movementCurrencyCode = selected.code;
             movementCurrencyRate = selected.rate || 1;
-            if (rateInput) rateInput.value = (movementCurrencyRate > 0 ? (1 / movementCurrencyRate) : 0).toFixed(4);
+            setMovementRateInputValue(movementCurrencyRate);
         }
 
         select.onchange = () => {
@@ -208,9 +331,10 @@ async function loadCurrenciesForMovement() {
             if (!chosen) return;
             movementCurrencyCode = chosen.code;
             movementCurrencyRate = chosen.rate || 1;
-            if (rateInput) rateInput.value = (movementCurrencyRate > 0 ? (1 / movementCurrencyRate) : 0).toFixed(4);
-            // No convertimos detalles existentes para evitar cambios inesperados.
+            setMovementRateInputValue(movementCurrencyRate);
+            renderMovementDetails();
         };
+        bindMovementRateInput();
     } catch (error) {
         console.error('Error loading currencies for movement:', error);
     }
@@ -257,6 +381,99 @@ async function addMovementDetail() {
     // Primero cargar productos para selección
     await loadProductsForSelection();
     showModal('product-selection-modal');
+}
+
+async function showQuickProductModal() {
+    const form = document.getElementById('quick-product-form');
+    if (form) form.reset();
+
+    if (typeof setupUnitSelectBehavior === 'function') {
+        setupUnitSelectBehavior('quick-product-unit', 'UNIDAD');
+    }
+    const unitEl = document.getElementById('quick-product-unit');
+    const minStockEl = document.getElementById('quick-product-min-stock');
+    if (unitEl) unitEl.value = 'UNIDAD';
+    if (minStockEl) minStockEl.value = '0';
+    const codeEl = document.getElementById('quick-product-code');
+    if (codeEl) codeEl.value = await getNextProductCode();
+
+    if (typeof showModal === 'function') {
+        showModal('quick-product-modal');
+    } else {
+        const modal = document.getElementById('quick-product-modal');
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay) overlay.style.display = 'block';
+        if (modal) modal.style.display = 'block';
+    }
+}
+
+function closeQuickProductModal() {
+    if (typeof closeModal === 'function') {
+        closeModal('quick-product-modal');
+    } else {
+        const modal = document.getElementById('quick-product-modal');
+        if (modal) modal.style.display = 'none';
+    }
+}
+
+async function saveQuickProductFromMovement() {
+    const code = (document.getElementById('quick-product-code')?.value || '').trim();
+    const name = (document.getElementById('quick-product-name')?.value || '').trim();
+    const description = (document.getElementById('quick-product-description')?.value || '').trim();
+    const unit = typeof getUnitValueFromSelect === 'function'
+        ? getUnitValueFromSelect('quick-product-unit')
+        : (document.getElementById('quick-product-unit')?.value || 'UNIDAD');
+    const minStock = parseFloat(document.getElementById('quick-product-min-stock')?.value || '0');
+    const maxStockRaw = document.getElementById('quick-product-max-stock')?.value;
+
+    if (!code || !name) {
+        showAlert('Código y nombre son obligatorios', 'warning');
+        return;
+    }
+
+    const payload = {
+        code,
+        name,
+        description: description || undefined,
+        unit,
+        minStock: Number.isFinite(minStock) ? minStock : 0,
+        isActive: true
+    };
+
+    if (maxStockRaw !== undefined && String(maxStockRaw).trim() !== '') {
+        const maxStock = parseFloat(maxStockRaw);
+        if (Number.isFinite(maxStock)) payload.maxStock = maxStock;
+    }
+
+    try {
+        const created = await apiRequest('/products', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        movementProducts.push(created);
+
+        const movementType = document.getElementById('movement-type').value;
+        const defaultUnitCost = movementType === 'ENTRADA' && movementCurrencyCode !== 'USD'
+            ? (parseNumberSafe(created.unitCost || 0) / (movementCurrencyRate || 1))
+            : parseNumberSafe(created.unitCost || 0);
+
+        movementDetails.push({
+            productId: created.id,
+            product: created,
+            quantity: 1,
+            unitCost: defaultUnitCost,
+            total: defaultUnitCost
+        });
+
+        renderMovementDetails();
+        closeQuickProductModal();
+        showAlert('Producto creado y agregado al movimiento', 'success');
+
+        try { await loadProductsForSelection(); } catch (e) { /* noop */ }
+    } catch (error) {
+        showAlert(error.message || 'Error al crear producto', 'error');
+    }
 }
 
 // Cargar productos para selección
@@ -358,6 +575,8 @@ function renderMovementDetails() {
     
     let total = 0;
     const movementType = document.getElementById('movement-type').value;
+        const currencyCode = movementType === 'ENTRADA' ? (document.getElementById('movement-currency')?.value || 'USD') : 'USD';
+        const rateAtTransaction = movementType === 'ENTRADA' ? movementCurrencyRate : 1;
     
     movementDetails.forEach((detail, index) => {
         const row = document.createElement('tr');
@@ -385,7 +604,7 @@ function renderMovementDetails() {
                        ${movementType === 'SALIDA' ? 'disabled' : ''}
                        onchange="updateMovementDetail(${index}, 'unitCost', this.value)">
             </td>
-            <td>${formatCurrency(detailTotal)}</td>
+            <td>${buildDualCurrencyHtml(detailTotal, currencyCode, rateAtTransaction)}</td>
             <td>
                 <button class="btn btn-sm btn-danger" onclick="removeMovementDetail(${index})">
                     <i class="fas fa-times"></i>
@@ -396,7 +615,7 @@ function renderMovementDetails() {
         tbody.appendChild(row);
     });
     
-    document.getElementById('movement-total').textContent = formatCurrency(total);
+    document.getElementById('movement-total').innerHTML = buildDualCurrencyHtml(total, currencyCode, rateAtTransaction);
 }
 
 // Actualizar detalle del movimiento
@@ -466,6 +685,7 @@ async function saveMovement() {
         clientId: clientId ? parseInt(clientId) : undefined,
         costCenterId: costCenterId ? parseInt(costCenterId) : undefined,
         currencyCode: type === 'ENTRADA' ? (document.getElementById('movement-currency')?.value || 'USD') : undefined,
+        rateAtTransaction: type === 'ENTRADA' ? movementCurrencyRate : 1,
         details: movementDetails.map(detail => ({
             productId: detail.productId,
             quantity: parseFloat(detail.quantity) || 0,
@@ -549,9 +769,10 @@ async function viewMovement(id) {
 async function printVoucher(id) {
     try {
         const voucher = await apiRequest(`/movements/${id}/voucher`);
+        const logoUrl = await getCompanyLogoForDocument();
         
         // Crear contenido HTML para el voucher
-        const voucherContent = createVoucherHTML(voucher);
+        const voucherContent = createVoucherHTML(voucher, logoUrl);
         
         // Crear ventana de impresión
         const printWindow = window.open('', '_blank');
@@ -567,7 +788,8 @@ async function printVoucher(id) {
                         .voucher-details { margin: 20px 0; }
                         .voucher-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
                         .voucher-table th, .voucher-table td { border: 1px solid #000; padding: 8px; }
-                        .total-row { font-weight: bold; font-size: 14pt; }
+                        .voucher-total-row td { font-weight: bold; }
+                        .voucher-total-label { text-align: right; }
                         .signature { margin-top: 50px; }
                     </style>
                 </head>
@@ -590,8 +812,51 @@ async function printVoucher(id) {
     }
 }
 
+async function getCompanyLogoForDocument() {
+    try {
+        const company = await apiRequest('/company');
+        if (!company?.logo) return null;
+
+        const backendBase = (typeof API_BASE_URL !== 'undefined')
+            ? API_BASE_URL.replace(/\/api\/?$/, '')
+            : `${window.location.protocol}//${window.location.hostname}:3000`;
+
+        let logoUrl = String(company.logo).replace(/\\/g, '/');
+        if (/^https?:\/\//i.test(logoUrl)) {
+            const u = new URL(logoUrl);
+            logoUrl = `${u.origin}${u.pathname}`;
+        } else if (logoUrl.startsWith('/uploads/')) {
+            logoUrl = `${backendBase}${logoUrl}`;
+        } else if (logoUrl.includes('/uploads/')) {
+            logoUrl = `${backendBase}${logoUrl.substring(logoUrl.indexOf('/uploads/'))}`;
+        } else {
+            return null;
+        }
+
+        const cacheKey = company.updatedAt ? new Date(company.updatedAt).getTime() : Date.now();
+        return `${logoUrl}${logoUrl.includes('?') ? '&' : '?'}v=${cacheKey}`;
+    } catch (error) {
+        console.warn('No se pudo cargar logo para documento:', error);
+        return null;
+    }
+}
+
+// Eliminar movimiento
+async function deleteMovement(id) {
+    const ok = confirm('¿Desea eliminar este movimiento? Esta acción ajustará el stock.');
+    if (!ok) return;
+    try {
+        await apiRequest(`/movements/${id}`, { method: 'DELETE' });
+        showAlert('Movimiento eliminado', 'success');
+        try { loadMovements(1); } catch (e) { /* noop */ }
+        try { if (typeof loadDashboard === 'function') loadDashboard(); } catch (e) { /* noop */ }
+    } catch (error) {
+        showAlert(error.message || 'Error al eliminar el movimiento', 'error');
+    }
+}
+
 // Crear HTML del voucher
-function createVoucherHTML(voucher) {
+function createVoucherHTML(voucher, logoUrl = null) {
     const typeText = voucher.type === 'ENTRADA' ? 'ENTRADA DE PRODUCTOS' : 'SALIDA DE PRODUCTOS';
     const entity = voucher.type === 'ENTRADA' ? 'Proveedor' : 'Centro de Costo';
     const entityName = voucher.type === 'ENTRADA' 
@@ -599,9 +864,11 @@ function createVoucherHTML(voucher) {
         : (voucher.costCenter?.name || 'N/A');
     
     const total = (voucher.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0);
+    const voucherRate = parseNumberSafe(voucher.rateAtTransaction) || 1;
     
     return `
         <div class="voucher-header">
+            ${logoUrl ? `<img src="${logoUrl}" alt="Logo Empresa" class="company-logo" style="max-width:140px;max-height:80px;display:block;margin:0 auto 12px;">` : ''}
             <h1>${typeText}</h1>
             <div class="voucher-info">
                 <p><strong>Número:</strong> ${voucher.id}</p>
@@ -634,17 +901,15 @@ function createVoucherHTML(voucher) {
                         <td>${detail.product?.name || detail.product || ''}</td>
                         <td>${formatUnit(detail.unit)}</td>
                         <td>${formatNumber(detail.quantity || 0)}</td>
-                        <td>${formatCurrency(Number(detail.unitCost) || 0)}</td>
-                        <td>${formatCurrency(detail.totalCost)}</td>
+                        <td>${buildDualCurrencyHtml(Number(detail.unitCost) || 0, voucher.currencyCode || 'USD', voucherRate)}</td>
+                        <td>${buildDualCurrencyHtml(detail.totalCost, voucher.currencyCode || 'USD', voucherRate)}</td>
                     </tr>
                 `).join('')}
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="5" class="text-right">TOTAL:</td>
-                    <td>${formatCurrency(total)}</td>
+                <tr class="voucher-total-row">
+                    <td colspan="5" class="voucher-total-label">TOTAL:</td>
+                    <td>${buildDualCurrencyHtml(total, voucher.currencyCode || 'USD', voucherRate)}</td>
                 </tr>
-            </tfoot>
+            </tbody>
         </table>
         
         <div class="signature">
@@ -657,6 +922,7 @@ function createVoucherHTML(voucher) {
 // Cargar movimientos recientes para el dashboard
 async function loadRecentMovements() {
     try {
+        await refreshMovementCurrencyRates();
         const response = await apiRequest('/movements?page=1&limit=5');
         
         const tbody = document.getElementById('recent-movements').querySelector('tbody');
@@ -670,6 +936,7 @@ async function loadRecentMovements() {
                 </td>
             `;
             tbody.appendChild(row);
+            if (typeof syncDashboardPanelHeights === 'function') syncDashboardPanelHeights();
             return;
         }
         
@@ -694,6 +961,7 @@ async function loadRecentMovements() {
 
         response.data.forEach(movement => {
             const row = document.createElement('tr');
+            const canDelete = isAdmin();
             
             let entity = '';
             if (movement.client) {
@@ -703,6 +971,8 @@ async function loadRecentMovements() {
             }
             
             const total = (movement.details || []).reduce((sum, detail) => sum + (parseNumberSafe(detail.totalCost) || 0), 0);
+            const currency = movement.currencyCode || 'USD';
+            const rateAtTransaction = parseNumberSafe(movement.rateAtTransaction) || 1;
             
             row.innerHTML = `
                 <td>${formatDate(movement.date)}</td>
@@ -713,16 +983,21 @@ async function loadRecentMovements() {
                 </td>
                 <td>${movement.documentNumber || 'N/A'}</td>
                 <td>${entity}</td>
-                <td>${formatCurrency(total)}</td>
+                <td>${buildDualCurrencyHtml(total, currency, rateAtTransaction)}</td>
                 <td>
                     <button class="btn btn-sm btn-outline" onclick="viewMovement(${movement.id})">
                         <i class="fas fa-eye"></i>
                     </button>
+                    ${canDelete ? `
+                    <button class="btn btn-sm btn-danger" onclick="deleteMovement(${movement.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>` : ''}
                 </td>
             `;
             
             tbody.appendChild(row);
         });
+        if (typeof syncDashboardPanelHeights === 'function') syncDashboardPanelHeights();
         
     } catch (error) {
         console.error('Error loading recent movements:', error);
@@ -733,5 +1008,13 @@ async function loadRecentMovements() {
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('movements-table')) {
         loadMovements();
+    }
+
+    const quickProductForm = document.getElementById('quick-product-form');
+    if (quickProductForm) {
+        quickProductForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveQuickProductFromMovement();
+        });
     }
 });
