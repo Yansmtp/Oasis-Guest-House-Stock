@@ -100,12 +100,13 @@ async function bootstrap() {
   // Interceptor global: convierte rutas de 'logo' que empiezan con '/uploads' en URLs absolutas
   app.useGlobalInterceptors(new LogoUrlInterceptor());
 
-  const port = process.env.PORT || configService.get<number>('PORT', 3000);
+  // Railway asigna el puerto automáticamente mediante la variable PORT
+  const port = process.env.PORT || 3000;
   
   const jwtSecret = configService.get('JWT_SECRET');
   if (!jwtSecret || jwtSecret === 'oasis_default_secret_key_change_me_in_production') {
-    console.warn('⚠️  ADVERTENCIA: JWT_SECRET no configurado en Railway. El sistema es vulnerable.');
-    console.warn('   Por favor, añade JWT_SECRET a las variables de entorno en el panel de Railway.');
+    console.error('❌ ERROR CRÍTICO: JWT_SECRET no configurado. La aplicación podría no funcionar correctamente.');
+    console.info('👉 Por favor, añade JWT_SECRET en las variables de entorno de Railway.');
   }
 
   await app.listen(port);
