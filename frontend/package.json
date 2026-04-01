@@ -1,0 +1,9 @@
+{
+  "name": "oasis-guest-house-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo 'No build required for static site'",
+    "install": "echo 'No dependencies to install'"
+  }
+}
