@@ -70,10 +70,10 @@
     "prisma": "^7.6.0",
     "source-map-support": "^0.5.0",
     "supertest": "^6.0.0",
-    "ts-jest": "^29.1.0",
+    "ts-jest": "^29.4.9",
     "ts-loader": "^9.0.0",
     "ts-node": "^10.0.0",
     "tsconfig-paths": "^4.0.0",
-    "typescript": "^6.0.2"
+    "typescript": "^5.7.3"
   }
 }
