@@ -16,7 +16,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate": "prisma generate && prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed:admin": "ts-node create-admin.ts",
     "db:backup:win": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\db-backup.ps1",

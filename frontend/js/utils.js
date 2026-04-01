@@ -1,6 +1,6 @@
-// Configuración de la API: Usamos una ruta relativa para que Vercel actúe como puente (proxy).
-// Esto evita errores de CORS ya que el navegador cree que consulta al mismo dominio de Vercel.
-const API_BASE_URL = '/api';
+// Configuración de la API: Apuntando directamente al servidor de Railway.
+// URL Base: https://oasis-guest-house-stock-ok.up.railway.app
+const API_BASE_URL = 'https://oasis-guest-house-stock-ok.up.railway.app/api';
 
 // Exponemos la URL globalmente para asegurar que todos los módulos la utilicen.
 window.API_BASE_URL = API_BASE_URL;
