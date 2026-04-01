@@ -19,6 +19,7 @@
     "prisma:migrate": "prisma generate && prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed:admin": "ts-node create-admin.ts",
+    "db:repair": "prisma migrate resolve --rolled-back 20260330_init",
     "db:backup:win": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\db-backup.ps1",
     "db:reset:win": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\db-reset.ps1 -Force",
     "postinstall": "prisma generate"
