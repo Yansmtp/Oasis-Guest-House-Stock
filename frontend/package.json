@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "if [ -f js/utils.js ]; then sed -i \"s|const API_BASE_URL = '.*'|const API_BASE_URL = '$API_BASE_URL'|g\" js/utils.js; fi",
+    "build": "echo 'Frontend build complete (static files)'",
     "install": "echo 'No dependencies to install'"
   }
 }
