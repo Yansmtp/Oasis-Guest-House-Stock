@@ -100,7 +100,7 @@ async function bootstrap() {
   // Interceptor global: convierte rutas de 'logo' que empiezan con '/uploads' en URLs absolutas
   app.useGlobalInterceptors(new LogoUrlInterceptor());
 
-  const port = process.env.PORT || configService.get('PORT', 3000);
+  const port = process.env.PORT || configService.get<number>('PORT', 3000);
   
   const jwtSecret = configService.get('JWT_SECRET');
   if (!jwtSecret || jwtSecret === 'oasis_default_secret_key_change_me_in_production') {
