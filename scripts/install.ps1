@@ -22,7 +22,7 @@ Set-Location "$currentPath\backend"
 # Crear .env
 $envContent = @"
 # Database
-DATABASE_URL="postgresql://postgres:$dbPassword@$dbHost:$dbPort/$dbName?schema=public"
+DATABASE_URL="postgresql://postgres:$dbPassword@$dbHost:$dbPort/$dbName?schema=public&sslmode=require"
 
 # JWT
 JWT_SECRET="inventario-secret-key-change-in-production-$(Get-Random -Minimum 100000 -Maximum 999999)"

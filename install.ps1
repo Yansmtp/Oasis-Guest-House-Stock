@@ -22,7 +22,7 @@ Set-Location "D:\inventario-casa-renta\backend"
 # Crear .env
 $envContent = @"
 # Database
-DATABASE_URL="postgresql://postgres:$dbPassword@$dbHost:$dbPort/$dbName?schema=public&sslmode=prefer"
+DATABASE_URL="postgresql://postgres:$dbPassword@$dbHost:$dbPort/$dbName?schema=public&sslmode=require"
 
 # JWT
 JWT_SECRET="oasis_secret_$(Get-Random -Minimum 100000 -Maximum 999999)"
