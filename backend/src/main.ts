@@ -64,8 +64,22 @@ async function bootstrap() {
 
   const frontendUrl = configService.get('FRONTEND_URL') || 'https://oasis-guest-house-stock.vercel.app';
 
+  const allowedOrigins = [
+    frontendUrl,
+    'http://localhost:5500',
+    'http://127.0.0.1:5500',
+    'http://localhost:3000'
+  ];
+
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:5500', 'http://127.0.0.1:5500'],
+    origin: (origin, callback) => {
+      // Permitir peticiones sin origen (como apps móviles o archivos locales .html)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Authorization', 'Accept'],

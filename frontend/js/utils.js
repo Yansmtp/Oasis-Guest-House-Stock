@@ -1,6 +1,8 @@
 // Configuración de la API: Usamos una ruta relativa para que Vercel actúe como puente (proxy).
 // Esto evita errores de CORS ya que el navegador cree que consulta al mismo dominio de Vercel.
-const API_BASE_URL = '/api';
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+    ? 'http://localhost:3000/api'
+    : '/api';
 
 // Exponemos la URL globalmente para asegurar que todos los módulos la utilicen.
 window.API_BASE_URL = API_BASE_URL;
