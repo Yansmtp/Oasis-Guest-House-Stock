@@ -1,7 +1,7 @@
 # install.ps1 - Instalación automática
 param(
     [string]$dbPassword = "password",
-    [string]$dbHost = "",
+    [string]$dbHost = "localhost",
     [string]$dbPort = "5432",
     [string]$dbName = "inventario_db",
     [string]$adminEmail = "admin@empresa.com",
@@ -17,12 +17,12 @@ Write-Host "Este script instalará todas las dependencias y configurará la base
 
 # 1. Configurar backend
 Write-Host "`n1. Configurando Backend..." -ForegroundColor Green
-Set-Location "D:\inventario-casa-renta\backend"
+Set-Location "$currentPath\backend"
 
 # Crear .env
 $envContent = @"
 # Database
-DATABASE_URL="postgresql://postgres:$dbPassword@$dbHost:$dbPort/$dbName?schema=public&sslmode=require"
+DATABASE_URL="postgresql://postgres:$dbPassword@$dbHost:$dbPort/$dbName?schema=public&sslmode=no-verify"
 
 # JWT
 JWT_SECRET="oasis_secret_$(Get-Random -Minimum 100000 -Maximum 999999)"
@@ -36,7 +36,7 @@ APP_NAME="Sistema de Inventario Casa Renta"
 "@
 
 Write-Host "✓ Archivo .env creado" -ForegroundColor Green
-$envContent | Out-File -FilePath "D:\inventario-casa-renta\backend\.env" -Encoding UTF8
+$envContent | Out-File -FilePath "$currentPath\backend\.env" -Encoding UTF8
 
 # Instalar dependencias
 Write-Host "Instalando dependencias de Node.js..." -ForegroundColor Yellow
@@ -63,7 +63,7 @@ Write-Host "✓ Logo placeholder creado" -ForegroundColor Green
 
 # 3. Crear scripts de utilidad
 Write-Host "`n3. Creando scripts de utilidad..." -ForegroundColor Green
-Set-Location "D:\inventario-casa-renta\scripts"
+Set-Location "$currentPath\scripts"
 
 # Script para crear usuario admin
 $adminScript = @"
@@ -137,7 +137,7 @@ echo 2. Iniciando Backend API...
 start cmd /k "cd /d "$currentPath\backend" && npm run start:dev"
 echo.
 echo 3. Abriendo Frontend...
-start "" "D:\inventario-casa-renta\frontend\index.html"
+start "" "$currentPath\frontend\index.html"
 echo.
 echo 4. Creando usuario administrador...
 cd /d "$currentPath\backend" && node ../scripts/create-admin.js
@@ -145,7 +145,7 @@ echo.
 echo ========================================
 echo    ACCESO AL SISTEMA:
 echo    Email: $adminEmail
-echo    URL: D:\inventario-casa-renta\frontend\index.html
+echo    URL: $currentPath\frontend\index.html
 echo    Contraseña: $adminPassword
 echo ========================================
 pause
