@@ -1,8 +1,8 @@
-// Configuración de la API: Usamos una ruta relativa para que Vercel actúe como puente (proxy).
-// Esto evita errores de CORS ya que el navegador cree que consulta al mismo dominio de Vercel.
+// Configuración de la API: Dirección del backend en Railway.
+// El backend permite el origen de Vercel en su configuración de CORS (main.ts).
 const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
-    ? 'http://localhost:3000/api'
-    : '/api';
+    ? 'https://oasis-guest-house-stock-ok.up.railway.app/api' // Elimina la opción de localhost para cualquier entorno que no sea producción en Vercel
+    : 'https://oasis-guest-house-stock-ok.up.railway.app/api'; // La URL base del backend en Railway
 
 // Exponemos la URL globalmente para asegurar que todos los módulos la utilicen.
 window.API_BASE_URL = API_BASE_URL;
